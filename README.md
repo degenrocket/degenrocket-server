@@ -11,3 +11,11 @@ sudo su - postgres
 psql
 ALTER USER postgres PASSWORD 'your_password';
 ```
+
+### Tables
+
+Table `posts` contains web2 posts (not signed with any private key), usually fetched from RSS sources.
+
+Table `actions` contains all web3 actions that are signed with a private key.
+
+Table `actions_count` contains the number of reactions received by the target action from other actions on this server.
