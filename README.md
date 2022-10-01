@@ -23,6 +23,8 @@ CREATE DATABASE news_database;
 ...
 ```
 
+Note: table `posts` is not necessary if you disable web2 posts.
+
 ### Tables
 
 Table `posts` contains web2 posts (not signed with any private key), usually fetched from RSS sources.
