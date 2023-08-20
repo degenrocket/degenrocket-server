@@ -23,7 +23,7 @@ CREATE DATABASE news_database;
 ...
 ```
 
-Note: table `posts` is not necessary if you disable web2 posts.
+Note: table `posts` is not necessary if you disable web2 posts. However, it's suggested to create table `posts` to avoid any errors.
 
 ### Tables
 
@@ -32,4 +32,31 @@ Table `posts` contains web2 posts (not signed with any private key), usually fet
 Table `actions` contains all web3 actions that are signed with a private key.
 
 Table `actions_count` contains the number of reactions received by the target action from other actions on this server.
+
+## Install
+
+```
+npm Install
+```
+
+## Environment
+
+Create `.env` file, see example `.env.example`.
+
+## Run
+
+Run using pm2
+
+```
+npm run prod
+pm2 save
+```
+
+## RSS
+
+The current git version doesn't include the RSS module. It might be added in the future.
+
+## Troubleshooting
+
+Send a message to `degenrocket` on [Session](https://getsession.org) if you need any help.
 
