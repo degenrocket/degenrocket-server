@@ -1,6 +1,15 @@
+/* The default timeout of rss-parser should be increased
+ * when parsing many sources.
+ * Open:
+ * node_modules/rss-parser/lib/parser.js:15
+ * Change 60000 (60 sec) to 120000 (120 sec) 
+ * E.g.:
+ * const DEFAULT_TIMEOUT = 120000;
+ */
+
 CREATE DATABASE news_database;
 
-CREATE TABLE posts(
+CREATE TABLE IF NOT EXISTS posts(
 id SERIAL NOT NULL,
 guid TEXT NOT NULL PRIMARY KEY,
 source TEXT,
@@ -15,7 +24,7 @@ pubdate TIMESTAMPTZ
 
 /* table with proof of all actions */
 /* TODO: add PRIMARY KEY to signature column for indexing? */
-CREATE TABLE actions(
+CREATE TABLE IF NOT EXISTS actions(
 id SERIAL NOT NULL,
 target TEXT NOT NULL,
 action TEXT,
