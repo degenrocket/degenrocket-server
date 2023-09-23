@@ -6,8 +6,8 @@ module.exports = {
     {
       name: `stage-back@${packageJson.version}`,
       script: './api/index.js',
-      exec_mode: process.env.BACKEND_PM2_STAGE_EXEC_MODE,
-      instances: process.env.BACKEND_PM2_STAGE_INSTANCES,
+      exec_mode: process.env.BACKEND_PM2_STAGE_EXEC_MODE || 'cluster',
+      instances: process.env.BACKEND_PM2_STAGE_INSTANCES || '1',
       autorestart: true,
       watch: false,
       max_memory_restart: '1G',
