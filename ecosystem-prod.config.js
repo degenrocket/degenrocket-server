@@ -1,10 +1,11 @@
 require('dotenv').config();
-const packageJson = require('./package.json');
+// const packageJson = require('./package.json');
 
 module.exports = {
   apps: [
     {
-      name: `prod-back@${packageJson.version}`,
+      // name: `prod-back@${packageJson.version}`,
+      name: 'dr-prod-back',
       script: './api/index.js',
       exec_mode: process.env.BACKEND_PM2_PROD_EXEC_MODE || 'cluster',
       instances: process.env.BACKEND_PM2_PROD_INSTANCES || 'max',
