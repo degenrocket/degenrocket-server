@@ -1,6 +1,6 @@
 {
   "name": "degen-rocket-server",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "license": "MIT",
   "description": "",
   "main": "index.js",
