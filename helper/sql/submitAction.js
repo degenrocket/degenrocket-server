@@ -1,6 +1,11 @@
 const DOMPurify = require('isomorphic-dompurify');
 const ethers = require("ethers");
 const pool = require("../../db");
+const enableNewWeb3ActionsAll = process.env.ENABLE_NEW_WEB3_ACTIONS_ALL === 'false' ? false : true;
+const enableNewWeb3ActionsPost = process.env.ENABLE_NEW_WEB3_ACTIONS_POST === 'false' ? false : true;
+const enableNewWeb3ActionsReact = process.env.ENABLE_NEW_WEB3_ACTIONS_REACT === 'false' ? false : true;
+const enableNewWeb3ActionsReply = process.env.ENABLE_NEW_WEB3_ACTIONS_REPLY === 'false' ? false : true;
+const enableNewWeb3ActionsModerate = process.env.ENABLE_NEW_WEB3_ACTIONS_MODERATE === 'false' ? false : true;
 
 // Override console.log for production
 if (process.env.NODE_ENV !== "dev") {
@@ -38,6 +43,24 @@ const submitAction = async (body) => {
     console.log('POST text:', text);
     console.log('POST signer:', signer);
     console.log('POST signature:', signature);
+
+    if (!enableNewWeb3ActionsAll) return "ERROR: submitting all new web3 actions is currently disabled"
+
+    if (!enableNewWeb3ActionsPost && action === 'post') {
+      return "ERROR: submitting new posts is currently disabled"
+    }
+
+    if (!enableNewWeb3ActionsReact && action === 'react') {
+      return "ERROR: submitting new reactions is currently disabled"
+    }
+
+    if (!enableNewWeb3ActionsReply && action === 'reply') {
+      return "ERROR: submitting new replies is currently disabled"
+    }
+
+    if (!enableNewWeb3ActionsModerate && action === 'moderate') {
+      return "ERROR: submitting new moderation actions is currently disabled"
+    }
     
     if (!signature) return "ERROR: signature is null"
 
