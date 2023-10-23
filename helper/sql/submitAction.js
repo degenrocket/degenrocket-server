@@ -1,3 +1,5 @@
+const nostrTools = require('nostr-tools');
+const { bech32 } = require('bech32');
 const DOMPurify = require('isomorphic-dompurify');
 const ethers = require("ethers");
 const pool = require("../../db");
@@ -6,6 +8,8 @@ const enableNewWeb3ActionsPost = process.env.ENABLE_NEW_WEB3_ACTIONS_POST === 'f
 const enableNewWeb3ActionsReact = process.env.ENABLE_NEW_WEB3_ACTIONS_REACT === 'false' ? false : true;
 const enableNewWeb3ActionsReply = process.env.ENABLE_NEW_WEB3_ACTIONS_REPLY === 'false' ? false : true;
 const enableNewWeb3ActionsModerate = process.env.ENABLE_NEW_WEB3_ACTIONS_MODERATE === 'false' ? false : true;
+const enableNewNostrActionsAll = process.env.ENABLE_NEW_NOSTR_ACTIONS_ALL === 'false' ? false : true;
+const enableNewEthereumActionsAll = process.env.ENABLE_NEW_ETHEREUM_ACTIONS_ALL === 'false' ? false : true;
 
 // Override console.log for production
 if (process.env.NODE_ENV !== "dev") {
@@ -15,12 +19,53 @@ if (process.env.NODE_ENV !== "dev") {
 }
 
 const submitAction = async (body) => {
-  console.log("submitAction.js was called")
   try {
-    let { signedString, signature, signer } = body
-    const signedObject = JSON.parse(signedString)
-    let { target, action, title, text } = signedObject
-    let signedDate = signedObject.time
+    let signedString, signature, signer, target, action, title, text, signedDate
+
+    if (body.dmpEvent) {
+      let { dmpEvent } = body
+      signedString = dmpEvent.signedString
+      signature = dmpEvent.signature
+      signer = dmpEvent.signer
+      const signedObject = JSON.parse(signedString)
+      target = signedObject.target
+      action = signedObject.action
+      title = signedObject.title
+      text = signedObject.text
+      signedDate = signedObject.time
+    } else if (body.nostrEvent) {
+      let { nostrEvent } = body
+      signedString = JSON.stringify(nostrEvent)
+      signature = nostrEvent.sig
+      signer = convertHexToBech32(nostrEvent.pubkey)
+
+      nostrEvent.tags.forEach(function (tag) {
+        if (Array.isArray(tag) && tag[0] === "spasm_target") {
+          target = tag[1]
+        }
+
+        if (Array.isArray(tag) && tag[0] === "spasm_action") {
+          action = tag[1]
+        }
+
+        if (Array.isArray(tag) && tag[0] === "spasm_title") {
+          title = tag[1]
+        }
+      });
+
+      text = nostrEvent.content
+
+      // Convert the Unix timestamp to a JavaScript Date object
+      const date = new Date(nostrEvent.created_at * 1000);
+
+      // Format the date in ISO format
+      const timestamptz = date.toISOString();
+
+      signedDate = timestamptz
+    } else {
+      return "ERROR: the action is neither Nostr, nor DMP"
+    }
+
     const time = new Date(Date.now()).toISOString();
     // const time = new Date().toISOString().slice(0, 19).replace('T', ' ');
     // console.log(time)
@@ -29,6 +74,8 @@ const submitAction = async (body) => {
     // Test dirty HTML
     // text = "<img src=x onerror=alert(1)//>"
 
+    // signedString is not sanitized because otherwise
+    // it wouldn't be possible to check the signature.
     signature = DOMPurify.sanitize(signature)
     signer = DOMPurify.sanitize(signer)
     target = DOMPurify.sanitize(target)
@@ -45,6 +92,10 @@ const submitAction = async (body) => {
     console.log('POST signature:', signature);
 
     if (!enableNewWeb3ActionsAll) return "ERROR: submitting all new web3 actions is currently disabled"
+
+    if (!enableNewNostrActionsAll && body.nostrEvent) return "ERROR: submitting all new Nostr actions is currently disabled"
+
+    if (!enableNewEthereumActionsAll && body.dmpEvent) return "ERROR: submitting all new Ethereum actions is currently disabled"
 
     if (!enableNewWeb3ActionsPost && action === 'post') {
       return "ERROR: submitting new posts is currently disabled"
@@ -64,7 +115,11 @@ const submitAction = async (body) => {
     
     if (!signature) return "ERROR: signature is null"
 
-    if (!verifySignature( signedString, signature, signer )) return "ERROR: invalid signature"
+    if (body.dmpEvent) {
+      if (!verifyEthereumSignature( signedString, signature, signer )) return "ERROR: invalid signature"
+    } else if (body.nostrEvent) {
+      if (!verifyNostrSignature( body.nostrEvent )) return "ERROR: invalid signature"
+    }
     
     if (await isSignatureAlreadyInDB(signature)) {
       console.log("ERROR: action signature is already in database")
@@ -105,8 +160,8 @@ const submitAction = async (body) => {
   }
 };
 
-const verifySignature = (signedString, signature, signer) => {
-  console.log('verifySignature was called')
+const verifyEthereumSignature = (signedString, signature, signer) => {
+  console.log("verifyEthereumSignature called")
   console.log('signedString:', signedString)
   console.log('signature:', signature)
   console.log('signer:', signer)
@@ -121,6 +176,23 @@ const verifySignature = (signedString, signature, signer) => {
     console.log('verifySignature:', recoveredAddress === signer)
     return recoveredAddress === signer
   }
+  console.log('signature is null or not a string')
+  return false
+}
+
+const verifyNostrSignature = (nostrEvent) => {
+  console.log("verifyNostrSignature called")
+
+  if (!nostrTools.validateEvent(nostrEvent)) {
+    console.log("validateEvent is false")
+    return false
+  }
+
+  if (nostrTools.verifySignature(nostrEvent)) {
+    console.log("verifySignature is true")
+    return true
+  }
+
   console.log('signature is null or not a string')
   return false
 }
@@ -231,5 +303,23 @@ const insertActionSignature = async (
       console.error('insertActionSignature failed', target, err);
     }
   };
+
+// Utils
+const convertHexToBech32 = (hexKey, prefix) => {
+  // Convert private or public key from HEX to bech32
+  let bytes = new Uint8Array(hexKey.length / 2);
+
+  for(let i = 0; i < hexKey.length; i+=2) {
+      bytes[i/2] = parseInt(hexKey.substr(i, 2), 16);
+  }
+
+  const words = bech32.toWords(bytes);
+
+  prefix = prefix ?? 'npub'
+
+  const bech32Key = bech32.encode(prefix, words);
+
+  return bech32Key
+}
 
 module.exports = submitAction;

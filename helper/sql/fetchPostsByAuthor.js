@@ -13,7 +13,7 @@ const fetchPostsByAuthor = async (dirtySigner) => {
   console.log("fetchPostsByAuthor called for signer:", signer)
   console.log("signer length:", signer.length)
   if (typeof(signer) !== "string") { return []}
-  if (signer.length > 42) { return []}
+  if (signer.length > 63) { return []}
 
   try {
     // TODO: delete unnecessary fields from query (target, latest_reaction_added_date?) 
