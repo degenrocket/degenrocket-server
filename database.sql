@@ -63,7 +63,7 @@ Signed reaction message structure:
   "action": "react",
   "target": "",
   "text": "",
-  "license": "MIT"
+  "license": "SPDX-License-Identifier: CC0-1.0"
 }
 */
 
@@ -75,7 +75,7 @@ Signed comment message structure:
   "action": "reply",
   "target": "",
   "text": "",
-  "license": "MIT"
+  "license": "SPDX-License-Identifier: CC0-1.0"
 }
 */
 
@@ -88,7 +88,7 @@ Signed post message structure:
   "title": "",
   "text": "",
   "tags": "",
-  "license": "MIT"
+  "license": "SPDX-License-Identifier: CC0-1.0"
 }
 */
 
@@ -100,8 +100,8 @@ Example of reaction:
   "action": "react",
   "target": "https://website.com/?p=12345",
   "text": "Important",
-  "license": "MIT"
+  "license": "SPDX-License-Identifier: CC0-1.0"
 }
 Short:
-{"version":"SM21","date":"Fri, 4 Jun 2021 19:00","action":"react","target":"https://website.com/?p=12345","message":"Important","license": "MIT"}
+{"version":"SM21","date":"Fri, 4 Jun 2021 19:00","action":"react","target":"https://website.com/?p=12345","message":"Important","license": "SPDX-License-Identifier: CC0-1.0"}
 */
