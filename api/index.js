@@ -9,6 +9,7 @@ const fetchAllActionsByCounting = require("../helper/sql/fetchAllActionsByCounti
 const fetchTargetActionsByCounting = require("../helper/sql/fetchTargetActionsByCounting");
 const fetchTargetComments = require("../helper/sql/fetchTargetComments");
 const fetchLatestComments = require("../helper/sql/fetchLatestComments");
+const fetchFullIdsFromShortId = require("../helper/sql/fetchFullIdsFromShortId");
 const submitAction = require("../helper/sql/submitAction");
 
 const app = express();
@@ -146,6 +147,22 @@ app.get("/api/authors/:id", async(req, res) => {
   } catch (err) {
     console.error(err);
     res.json(err);
+  }
+})
+
+// Fetch full ID from a short ID
+// Used to shorten IDs/signatures in long URLs
+// to e.g. 20 symbols instead of 132/128
+app.get("/api/short-id/:id", async(req, res) => {
+  const shortId = req.query.id;
+  console.log(`/api/short-id/:id called with shortId: ${shortId}`) 
+  console.log("query:", req.query);
+
+  try {
+    const allFullIdsThatMatchShortId = await fetchFullIdsFromShortId(shortId)
+    res.json(allFullIdsThatMatchShortId);
+  } catch (err) {
+    console.error(err);
   }
 })
 
