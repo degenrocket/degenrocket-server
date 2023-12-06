@@ -1,4 +1,7 @@
 # Created by .ignore support plugin (hsz.mobi)
+# Custom files for each instance
+helper/rss/custom/customFeedSources.js
+
 ### Node template
 # Logs
 /logs

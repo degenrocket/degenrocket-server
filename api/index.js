@@ -11,9 +11,18 @@ const fetchTargetComments = require("../helper/sql/fetchTargetComments");
 const fetchLatestComments = require("../helper/sql/fetchLatestComments");
 const fetchFullIdsFromShortId = require("../helper/sql/fetchFullIdsFromShortId");
 const submitAction = require("../helper/sql/submitAction");
+const fetchPostsFromRssSources = require("../helper/rss/fetchPostsFromRssSources");
+const Bree = require('bree')
 
 const app = express();
 const port = process.env.BACKEND_PORT;
+// RSS module is disabled by default
+const enableRssModule = process.env.ENABLE_RSS_MODULE === 'true' ? true : false
+const enableRssSourcesUpdates = process.env.ENABLE_RSS_SOURCES_UPDATES === 'true' ? true : false
+// Default update frequencies are set to weird numbers to minimize overlapping
+const rssFrequencyLowTimeInterval = process.env.RSS_FREQUENCY_LOW_TIME_INTERVAL || '50s'
+const rssFrequencyMediumTimeInterval = process.env.RSS_FREQUENCY_MEDIUM_TIME_INTERVAL || '15m'
+const rssFrequencyHighTimeInterval = process.env.RSS_FREQUENCY_HIGH_TIME_INTERVAL || '58m'
 
 // Override console.log for production
 console.log(`NODE_ENV=${process.env.NODE_ENV}`)
@@ -176,6 +185,45 @@ app.post("/api/submit/", async (req, res) => {
   return res.json(submitResult);
 });
 
+// For RSS tests:
+// app.get("/api/rss-fetch-testrun", async (req, res) => {
+//   console.log('/api/rss-fetch-testrun is called')
+//   if (enableRssModule && enableRssSourcesUpdates) {
+//     try {
+//       const result = await fetchPostsFromRssSources("test")
+//       return res.json(result);
+//     } catch (err) {
+//       console.error(err);
+//     }
+//   }
+// });
+
 app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`);
+  console.log(`The app is listening at http://localhost:${port}`);
 });
+
+// Bree is used instead of node-cron for scheduled jobs
+const bree = new Bree({
+  jobs : [
+    // runs the job on Start
+    // 'rssFrequencyMediumTimeInterval',
+
+    // runs jobs periodically
+    {
+      name : 'runFetchRssFrequencyHigh',
+      interval : rssFrequencyHighTimeInterval
+    },
+    {
+      name : 'runFetchRssFrequencyMedium',
+      interval : rssFrequencyMediumTimeInterval
+    },
+    {
+      name : 'runFetchRssFrequencyLow',
+      interval : rssFrequencyLowTimeInterval
+    }
+  ]
+})
+
+if (enableRssModule && enableRssSourcesUpdates) {
+  bree.start()
+}
