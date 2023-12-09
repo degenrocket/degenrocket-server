@@ -81,13 +81,24 @@ app.get("/api/posts/:id", async(req, res) => {
         return;
       }
     }
+
     console.log('index.js - post has not been found for req.query.p:', req.query.p)
-    if (req.params.id !== 'search') {
+
+    if (req.params.id && req.params.id !== 'search') {
       const post = await fetchPostById(req.params.id)
-      res.json(post);
-      return
+      if (post) {
+        const setRes = () => res.json(post)
+        setTimeout(setRes, 300)
+        // res.json(post);
+        return
+      }
+
     }
-    res.json({ error: 'post has not been found' })
+
+    const setRes = () => res.json({ error: 'post has not been found' })
+    setTimeout(setRes, 300)
+    // res.json({ error: 'post has not been found' })
+    return
   } catch (err) {
     console.error(err);
     res.json(err);
