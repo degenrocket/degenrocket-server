@@ -1,8 +1,8 @@
-const getFeed = require("./getFeed");
-const stripFeedItem = require("./stripFeedItem");
-const pool = require("../../db");
-const fs = require('fs');
-const path = require('path');
+import { getFeed } from "./getFeed";
+import { stripFeedItem } from "./stripFeedItem";
+import { pool } from "../../db";
+import fs from 'fs';
+import path from 'path';
 // RSS module is disabled by default
 const enableRssModule = process.env.ENABLE_RSS_MODULE === 'true' ? true : false
 const enableRssSourcesUpdates = process.env.ENABLE_RSS_SOURCES_UPDATES === 'true' ? true : false
@@ -20,9 +20,9 @@ if (process.env.NODE_ENV !== "dev") {
  * The exact time intervals of update frequencies
  * can be changed with .env variables.
  */
-const fetchPostsFromRssSources = async (frequency) => {
+export const fetchPostsFromRssSources = async (frequency) => {
   // console.log('process.env.NODE_ENV =', process.env.NODE_ENV)
-  // const time = new Date(Date.now()).toISOString();
+  const time = new Date(Date.now()).toISOString();
   // console.error('fetchPostsFromRssSources is called at:', time)
 
   let sources = []
@@ -130,5 +130,3 @@ const fetchPostsFromRssSources = async (frequency) => {
     console.error(err);
   }
 }
-
-module.exports = fetchPostsFromRssSources;

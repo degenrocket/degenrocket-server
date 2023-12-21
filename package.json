@@ -5,11 +5,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "NODE_ENV=dev nodemon api/index.js",
-    "start": "nodemon api/index.js",
+    "dev": "NODE_ENV=dev nodemon api/index.ts",
+    "build": "npx tsc",
+    "start": "nodemon dist/api/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "prod": "pm2 start ecosystem-prod.config.js",
-    "stage": "pm2 start ecosystem-stage.config.js"
+    "prod": "npm run build && pm2 start ecosystem-prod.config.js",
+    "stage": "npm run build && pm2 start ecosystem-stage.config.js"
   },
   "author": "",
   "private": "true",
@@ -23,9 +24,16 @@
     "html-to-text": "^9.0.5",
     "isomorphic-dompurify": "^1.8.0",
     "lodash": "^4.17.21",
-    "nodemon": "^3.0.1",
     "nostr-tools": "^1.17.0",
     "pg": "^8.11.3",
     "rss-parser": "^3.13.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.5",
+    "nodemon": "^3.0.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
   }
 }

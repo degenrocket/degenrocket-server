@@ -6,7 +6,7 @@ module.exports = {
     {
       // name: `prod-back@${packageJson.version}`,
       name: 'dr-prod-back',
-      script: './api/index.js',
+      script: './dist/api/index.js',
       exec_mode: process.env.BACKEND_PM2_PROD_EXEC_MODE || 'cluster',
       instances: process.env.BACKEND_PM2_PROD_INSTANCES || 'max',
       autorestart: true,

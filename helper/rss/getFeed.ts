@@ -9,7 +9,7 @@ const Parser = require("rss-parser");
 
 let parser = new Parser();
 
-const getFeed = async (source) => {
+export const getFeed = async (source) => {
   console.log("Parsing feed");
   if (source && source.name) {
     console.log("Source:", source.name);
@@ -30,5 +30,3 @@ const getFeed = async (source) => {
   });
   return data;
 };
-
-module.exports = getFeed;

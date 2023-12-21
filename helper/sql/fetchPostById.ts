@@ -1,5 +1,6 @@
 const DOMPurify = require('isomorphic-dompurify');
-const pool = require("../../db");
+// const pool = require("../../db");
+import { pool } from "../../db";
 
 // Override console.log for production
 if (process.env.NODE_ENV !== "dev") {
@@ -8,7 +9,7 @@ if (process.env.NODE_ENV !== "dev") {
   console.warn = () => {}
 }
 
-const fetchPostById = async (dirtyId) => {
+export const fetchPostById = async (dirtyId) => {
   const id = DOMPurify.sanitize(dirtyId)
   console.log("fetchPostById called for id:", id)
 
@@ -45,7 +46,7 @@ const fetchPostById = async (dirtyId) => {
       
       // if a URL is not found, try adding '/' at the end
       if (idColumn === 'url' && typeof(id) === 'string') {
-        newId = id + '/'
+        const newId = id + '/'
         console.log(`Adding '/' to id and searching again. newId:`, newId)
         data = await fetchPost(postsTable, actionsCountTable, joinId, idColumn, date, newId)
 
@@ -113,5 +114,3 @@ const fetchPost = async (postsTable, actionsCountTable, joinId, idColumn, date, 
     console.error(err);
   }
 }
-
-module.exports = fetchPostById;

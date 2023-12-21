@@ -39,7 +39,7 @@ if (process.env.NODE_ENV !== "dev") {
 // "https://source.com/feeds/news.rss.xml"
 // "https://github.com/user/project/releases.atom"
 
-const feedSourcesFrequencyHigh =
+export const feedSourcesFrequencyHigh =
   [
     // sources are sorted by name
     // {
@@ -51,7 +51,7 @@ const feedSourcesFrequencyHigh =
     // },
   ];
 
-const feedSourcesFrequencyMedium =
+export const feedSourcesFrequencyMedium =
   [
     // ====================================
     // Category: defi
@@ -83,7 +83,7 @@ const feedSourcesFrequencyMedium =
     },
   ];
 
-const feedSourcesFrequencyLow =
+export const feedSourcesFrequencyLow =
   [
     // sources are sorted by name
     // {
@@ -96,7 +96,7 @@ const feedSourcesFrequencyLow =
   ];
 
 // Test sources are used for testing the RSS module
-const feedSourcesFrequencyTest =
+export const feedSourcesFrequencyTest =
   [
     // sources are sorted by name
     // {
@@ -109,7 +109,7 @@ const feedSourcesFrequencyTest =
   ];
 
 // Archived sources are not used for fetching updates
-const feedSourcesArchived =
+export const feedSourcesArchived =
   [
     // sources are sorted by name
     // {
@@ -120,5 +120,3 @@ const feedSourcesArchived =
     //   tickers: ""
     // },
   ];
-
-module.exports = { feedSourcesFrequencyHigh, feedSourcesFrequencyMedium, feedSourcesFrequencyLow, feedSourcesFrequencyTest };

@@ -1,5 +1,6 @@
 const DOMPurify = require('isomorphic-dompurify');
-const pool = require("../../db");
+// const pool = require("../../db");
+import { pool } from "../../db";
 
 // Override console.log for production
 if (process.env.NODE_ENV !== "dev") {
@@ -8,7 +9,7 @@ if (process.env.NODE_ENV !== "dev") {
   console.warn = () => {}
 }
 
-const fetchPostsByAuthor = async (dirtySigner) => {
+export const fetchPostsByAuthor = async (dirtySigner) => {
   const signer = DOMPurify.sanitize(dirtySigner)
   console.log("fetchPostsByAuthor called for signer:", signer)
   console.log("signer length:", signer.length)
@@ -64,5 +65,3 @@ const fetchPosts = async (postsTable, actionsCountTable, joinId, signerColumn, d
     console.error(err);
   }
 }
-
-module.exports = fetchPostsByAuthor;

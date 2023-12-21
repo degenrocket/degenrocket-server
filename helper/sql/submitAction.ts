@@ -2,7 +2,7 @@ const nostrTools = require('nostr-tools');
 const { bech32 } = require('bech32');
 const DOMPurify = require('isomorphic-dompurify');
 const ethers = require("ethers");
-const pool = require("../../db");
+import { pool } from "../../db";
 const enableNewWeb3ActionsAll = process.env.ENABLE_NEW_WEB3_ACTIONS_ALL === 'false' ? false : true;
 const enableNewWeb3ActionsPost = process.env.ENABLE_NEW_WEB3_ACTIONS_POST === 'false' ? false : true;
 const enableNewWeb3ActionsReact = process.env.ENABLE_NEW_WEB3_ACTIONS_REACT === 'false' ? false : true;
@@ -18,7 +18,7 @@ if (process.env.NODE_ENV !== "dev") {
   console.warn = () => {}
 }
 
-const submitAction = async (body) => {
+export const submitAction = async (body) => {
   try {
     let signedString, signature, signer, target, action, title, text, signedDate
 
@@ -305,7 +305,7 @@ const insertActionSignature = async (
   };
 
 // Utils
-const convertHexToBech32 = (hexKey, prefix) => {
+const convertHexToBech32 = (hexKey, prefix?) => {
   // Convert private or public key from HEX to bech32
   let bytes = new Uint8Array(hexKey.length / 2);
 
@@ -321,5 +321,3 @@ const convertHexToBech32 = (hexKey, prefix) => {
 
   return bech32Key
 }
-
-module.exports = submitAction;

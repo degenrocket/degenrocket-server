@@ -1,5 +1,6 @@
 const DOMPurify = require('isomorphic-dompurify');
-const pool = require("../../db");
+// const pool = require("../../db");
+import { pool } from "../../db";
 
 // Override console.log for production
 if (process.env.NODE_ENV !== "dev") {
@@ -12,7 +13,7 @@ if (process.env.NODE_ENV !== "dev") {
  * Select how many actions this target has from unique signers
  * e.g. target:xyz, bullish:3, bearish:null, important:1, comments: 3, date:2021 */
 // 'id' is passed in a parameterized query to prevent SQL injections
-const fetchTargetComments = async (dirtyId) => {
+export const fetchTargetComments = async (dirtyId) => {
   const id = DOMPurify.sanitize(dirtyId)
   console.log('========================================');
   console.log('fetchTargetComments called with id:', id);
@@ -92,5 +93,3 @@ const fetchChildren = async (id) => {
     console.error('fetchTargetComments failed', err);
   }
 }
-
-module.exports = fetchTargetComments;

@@ -1,4 +1,5 @@
-const pool = require("../../db");
+// const pool = require("../../db");
+import { pool } from "../../db";
 
 // Override console.log for production
 if (process.env.NODE_ENV !== "dev") {
@@ -26,7 +27,7 @@ if (process.env.NODE_ENV !== "dev") {
  * TRUNCATE TABLE reactions_count;
  * INSERT INTO reactions_count
  */
-const fetchAllReactionsByCounting = async () => {
+export const fetchAllActionsByCounting = async () => {
   const tableName = 'actions'
   const queryString = `
     WITH unique_targets AS (SELECT DISTINCT target FROM ${tableName})
@@ -71,5 +72,3 @@ const fetchAllReactionsByCounting = async () => {
     console.error(err);
   }
 }
-
-module.exports = fetchAllReactionsByCounting;

@@ -1,4 +1,6 @@
-const pool = require("../../db");
+// const pool = require("../../db");
+import { pool } from "../../db";
+import { FeedFilters, FiltersWebType, PostAction, Post } from "../../types/interfaces";
 
 // Override console.log for production
 if (process.env.NODE_ENV !== "dev") {
@@ -7,11 +9,11 @@ if (process.env.NODE_ENV !== "dev") {
   console.warn = () => {}
 }
 
-const fetchAllPosts = async (filters) => {
+export const fetchAllPosts = async (filters: FeedFilters) => {
   try {
     // Options
-    const web2 = true
-    const web3 = true
+    let web2: Boolean = true
+    let web3: Boolean = true
     // const ipfs = false
     
     let data = []
@@ -19,16 +21,34 @@ const fetchAllPosts = async (filters) => {
     let web3Posts = []
     let ipfsPosts = []
 
-    let webType = filters.webType || 'web3'
+    // web2
+    if (filters?.webType === 'web2') {
+      web2 = true
+      web3 = false
+    // web3
+    } else if (filters?.webType === 'web3') {
+      web2 = false
+      web3 = true
+    // all
+    } else if (
+      !filters?.webType ||
+      filters?.webType === 'any' ||
+      filters?.webType === 'all'
+    ) {
+      web2 = true
+      web3 = true
+    // default (e.g. 'web1')
+    } else {
+      web2 = false
+      web3 = false
+    }
 
     if (web2) {
-      webType = 'web2'
-      web2Posts = await fetchPosts(webType, filters)
+      web2Posts = await fetchPosts('web2', filters)
     }
 
     if (web3) {
-      webType = 'web3'
-      web3Posts = await fetchPosts(webType, filters)
+      web3Posts = await fetchPosts('web3', filters)
     }
 
     // ipfs
@@ -43,11 +63,19 @@ const fetchAllPosts = async (filters) => {
   }
 }
 
-const fetchPosts = async (webType, filters) => {
+const fetchPosts = async (webType: FiltersWebType, filters: FeedFilters) => {
   
-  let tableName, actionsCountTable, joinId, date
+  // web2 | web3
+  type TableName = 'posts' | 'actions'
+  type ActionsCountTable = 'actions_count'
+  type JoinIdColumn = 'url' | 'signature'
+  type DateColumn = 'pubdate' | 'added_time' 
 
-  let action = null
+  let tableName: TableName
+  let actionsCountTable: ActionsCountTable
+  let joinId: JoinIdColumn
+  let date: DateColumn
+  let action: PostAction = null
 
   switch (webType) {
     case 'web2':
@@ -120,7 +148,7 @@ const fetchPosts = async (webType, filters) => {
       AND (action = '${action}')` }
 
     let filtersActivityCount = 0 
-    let activityQuery = ''
+    // let activityQuery = ''
 
     switch (filters.activity) {
       case 'hot':
@@ -182,19 +210,43 @@ const fetchPosts = async (webType, filters) => {
 
 // web2 posts have .pubdate, while web3 posts have .added_time
 // thus, we can either normalize data or use this solution
-const sortPosts = (array) => {
-  array.sort(function (a, b) {
-    if (a.pubdate && b.pubdate) {
-      return b.pubdate - a.pubdate
-    } else if (a.pubdate && b.added_time) {
-      return b.added_time - a.pubdate
-    } else if (a.added_time && b.added_time) {
-      return b.added_time - a.added_time
-    } else if (a.added_time && b.pubdate) {
-      return b.pubdate - a.added_time
-    }
-  })
-  return array
+const sortPosts = (array: Post[]) => {
+ array.sort(function (a, b) {
+   // Typescript only allows arithmetic operations with values of type
+   // 'any', 'number', 'bigint', or 'enum', so we have to firstly
+   // convert 'pubdate' and 'added_time' to Date objects with new Date()
+   // and then to numbers with getTime().
+   const aPubdate = a.pubdate ? new Date(a.pubdate).getTime() : 0;
+   const bPubdate = b.pubdate ? new Date(b.pubdate).getTime() : 0;
+   const aAddedTime = a.added_time ? new Date(a.added_time).getTime() : 0;
+   const bAddedTime = b.added_time ? new Date(b.added_time).getTime() : 0;
+
+   if (aPubdate && bPubdate) {
+     return bPubdate - aPubdate;
+   } else if (aPubdate && bAddedTime) {
+     return bAddedTime - aPubdate;
+   } else if (aAddedTime && bAddedTime) {
+     return bAddedTime - aAddedTime;
+   } else if (aAddedTime && bPubdate) {
+     return bPubdate - aAddedTime;
+   }
+ });
+ return array;
 }
 
-module.exports = fetchAllPosts;
+// An approach below throws TS error since 'pubdate' and 'added_time'
+// are not of type 'any', 'number', 'biging', or 'enum'.
+// const sortPosts = (array: Post[]) => {
+//   array.sort(function (a, b) {
+//     if (a.pubdate && b.pubdate) {
+//       return b.pubdate - a.pubdate
+//     } else if (a.pubdate && b.added_time) {
+//       return b.added_time - a.pubdate
+//     } else if (a.added_time && b.added_time) {
+//       return b.added_time - a.added_time
+//     } else if (a.added_time && b.pubdate) {
+//       return b.pubdate - a.added_time
+//     }
+//   })
+//   return array
+// }

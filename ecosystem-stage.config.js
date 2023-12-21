@@ -6,7 +6,7 @@ module.exports = {
     {
       // name: `stage-back@${packageJson.version}`,
       name: 'dr-stage-back',
-      script: './api/index.js',
+      script: './dist/api/index.js',
       exec_mode: process.env.BACKEND_PM2_STAGE_EXEC_MODE || 'cluster',
       instances: process.env.BACKEND_PM2_STAGE_INSTANCES || '1',
       autorestart: true,

@@ -1,5 +1,5 @@
 const DOMPurify = require('isomorphic-dompurify');
-const pool = require("../../db");
+import { pool } from "../../db";
 const enableShortUrlsForWeb3Actions = process.env.ENABLE_SHORT_URLS_FOR_WEB3_ACTIONS === 'false' ? false : true;
 
 // Override console.log for production
@@ -9,7 +9,7 @@ if (process.env.NODE_ENV !== "dev") {
   console.warn = () => {}
 }
 
-const fetchFullIdsFromShortId = async (dirtyId) => {
+export const fetchFullIdsFromShortId = async (dirtyId) => {
   if (!enableShortUrlsForWeb3Actions) return []
 
   const id = DOMPurify.sanitize(dirtyId)
@@ -55,4 +55,3 @@ const fetchFullIds = async (postsTable, idColumn, author, date, id) => {
     console.error(err);
   }
 }
-module.exports = fetchFullIdsFromShortId;

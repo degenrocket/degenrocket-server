@@ -1,28 +1,32 @@
-require('dotenv').config()
 //require('dotenv').config({ path: "../.env" })
-const express = require("express");
-const cors = require("cors");
-const fetchAllPosts = require("../helper/sql/fetchAllPosts");
-const fetchPostById = require("../helper/sql/fetchPostById");
-const fetchPostsByAuthor = require("../helper/sql/fetchPostsByAuthor");
-const fetchAllActionsByCounting = require("../helper/sql/fetchAllActionsByCounting");
-const fetchTargetActionsByCounting = require("../helper/sql/fetchTargetActionsByCounting");
-const fetchTargetComments = require("../helper/sql/fetchTargetComments");
-const fetchLatestComments = require("../helper/sql/fetchLatestComments");
-const fetchFullIdsFromShortId = require("../helper/sql/fetchFullIdsFromShortId");
-const submitAction = require("../helper/sql/submitAction");
-const fetchPostsFromRssSources = require("../helper/rss/fetchPostsFromRssSources");
-const Bree = require('bree')
+import express, { Express, Request, Response } from "express";
+import dotenv from "dotenv";
+import cors from "cors";
+import Bree from "bree";
+import { fetchAllPosts } from "../helper/sql/fetchAllPosts";
+import { fetchPostById } from "../helper/sql/fetchPostById";
+import { fetchPostsByAuthor } from "../helper/sql/fetchPostsByAuthor";
+import { fetchAllActionsByCounting } from "../helper/sql/fetchAllActionsByCounting";
+import { fetchTargetActionsByCounting } from "../helper/sql/fetchTargetActionsByCounting";
+import { fetchTargetComments } from "../helper/sql/fetchTargetComments";
+import { fetchLatestComments } from "../helper/sql/fetchLatestComments";
+import { fetchFullIdsFromShortId } from "../helper/sql/fetchFullIdsFromShortId";
+import { submitAction } from "../helper/sql/submitAction";
+// import { fetchPostsFromRssSources } from "../helper/rss/fetchPostsFromRssSources";
+import { QueryFeedFilters, FeedFilters } from "../types/interfaces";
 
-const app = express();
-const port = process.env.BACKEND_PORT;
+dotenv.config();
+
+const app: Express = express();
+// const app = express();
+const port: string = process.env.BACKEND_PORT;
 // RSS module is disabled by default
-const enableRssModule = process.env.ENABLE_RSS_MODULE === 'true' ? true : false
-const enableRssSourcesUpdates = process.env.ENABLE_RSS_SOURCES_UPDATES === 'true' ? true : false
+const enableRssModule: boolean = process.env.ENABLE_RSS_MODULE === 'true' ? true : false
+const enableRssSourcesUpdates: boolean = process.env.ENABLE_RSS_SOURCES_UPDATES === 'true' ? true : false
 // Default update frequencies are set to weird numbers to minimize overlapping
-const rssFrequencyLowTimeInterval = process.env.RSS_FREQUENCY_LOW_TIME_INTERVAL || '50s'
-const rssFrequencyMediumTimeInterval = process.env.RSS_FREQUENCY_MEDIUM_TIME_INTERVAL || '15m'
-const rssFrequencyHighTimeInterval = process.env.RSS_FREQUENCY_HIGH_TIME_INTERVAL || '58m'
+const rssFrequencyLowTimeInterval: string = process.env.RSS_FREQUENCY_LOW_TIME_INTERVAL || '50s'
+const rssFrequencyMediumTimeInterval: string = process.env.RSS_FREQUENCY_MEDIUM_TIME_INTERVAL || '15m'
+const rssFrequencyHighTimeInterval: string = process.env.RSS_FREQUENCY_HIGH_TIME_INTERVAL || '58m'
 
 // Override console.log for production
 console.log(`NODE_ENV=${process.env.NODE_ENV}`)
@@ -40,9 +44,9 @@ app.use(express.json()) // => req.body
 //ROUTES//
 
 // get all posts
-app.get("/api/posts", async(req, res) => {
-  const q = req.query
-  const filters = {
+app.get("/api/posts", async(req: Request, res: Response) => {
+  const q: QueryFeedFilters = req.query
+  const filters: FeedFilters = {
     webType: q.webType && q.webType !== 'false' ? q.webType : null,
     category: q.category && q.category !== 'false' ? q.category : null,
     platform: q.platform && q.platform !== 'false' ? q.platform : null,
@@ -63,7 +67,7 @@ app.get("/api/posts", async(req, res) => {
   }
 })
 
-app.get("/api/posts/:id", async(req, res) => {
+app.get("/api/posts/:id", async(req: Request, res: Response) => {
   // console.log('req.params.id in /api/posts/:id is:', req.params.id)
   // console.log('req.params in /api/posts/:id is:', req.params)
   // console.log('req.query in /api/posts/:id is:', req.query)
@@ -109,7 +113,7 @@ app.get("/api/posts/:id", async(req, res) => {
 // Don't delete, because it can be used to re-calculate actions_count table.
 // Although, it doesn't work now. Check the query.
 // Fetch combined table of different actions (bullish, bearish, important, comments) for all targets
-app.get("/api/posts/actions", async(req, res) => {
+app.get("/api/posts/actions", async(_: Request, res: Response) => {
   console.log("/api/posts/actions called") 
   try {
     const allReactions = await fetchAllActionsByCounting()
@@ -120,7 +124,7 @@ app.get("/api/posts/actions", async(req, res) => {
 })
 
 // Fetch how many reactions a target has
-app.get("/api/posts/actions/:id", async(req, res) => {
+app.get("/api/posts/actions/:id", async(req: Request, res: Response) => {
   const target = req.query.target;
   console.log(`/api/posts/reactions/:id called with target: ${target}`) 
   console.log("query:", req.query);
@@ -134,7 +138,7 @@ app.get("/api/posts/actions/:id", async(req, res) => {
 })
 
 // Fetch latest comments
-app.get("/api/comments/", async(req, res) => {
+app.get("/api/comments/", async(_: Request, res: Response) => {
   console.log("/api/comments/ called") 
   try {
     const latestComments = await fetchLatestComments()
@@ -145,7 +149,7 @@ app.get("/api/comments/", async(req, res) => {
 })
 
 // Fetch all comments a target has
-app.get("/api/targets/comments/:id", async(req, res) => {
+app.get("/api/targets/comments/:id", async(req: Request, res: Response) => {
   const target = req.query.target;
   console.log(`/api/targets/comments/:id called with target: ${target}`) 
   console.log("query:", req.query);
@@ -159,7 +163,7 @@ app.get("/api/targets/comments/:id", async(req, res) => {
 })
 
 // Fetch all actions an author submitted
-app.get("/api/authors/:id", async(req, res) => {
+app.get("/api/authors/:id", async(req: Request, res: Response) => {
   try {
     const posts = await fetchPostsByAuthor(req.params.id)
     setTimeout(() => { res.json(posts) }, 300)
@@ -173,7 +177,7 @@ app.get("/api/authors/:id", async(req, res) => {
 // Fetch full ID from a short ID
 // Used to shorten IDs/signatures in long URLs
 // to e.g. 20 symbols instead of 132/128
-app.get("/api/short-id/:id", async(req, res) => {
+app.get("/api/short-id/:id", async(req: Request, res: Response) => {
   const shortId = req.query.id;
   console.log(`/api/short-id/:id called with shortId: ${shortId}`) 
   console.log("query:", req.query);
@@ -186,7 +190,7 @@ app.get("/api/short-id/:id", async(req, res) => {
   }
 })
 
-app.post("/api/submit/", async (req, res) => {
+app.post("/api/submit/", async (req: Request, res: Response) => {
   // console.log("===========================================")
   // console.log('POST on /api/submit/ was called');
 

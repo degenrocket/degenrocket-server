@@ -1,6 +1,7 @@
 # Created by .ignore support plugin (hsz.mobi)
 # Custom files for each instance
 helper/rss/custom/customFeedSources.js
+helper/rss/custom/customFeedSources.ts
 
 ### Node template
 # Logs
@@ -82,7 +83,7 @@ typings/
 # nuxt.js build output
 .nuxt
 
-# Nuxt generate
+# Nuxt generate, TypeScript build
 dist
 
 # vuepress build output

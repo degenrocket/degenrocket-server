@@ -5,7 +5,8 @@ const port = process.env.POSTGRES_PORT;
 const database = process.env.POSTGRES_DATABASE;
 const password = process.env.POSTGRES_PASSWORD;
 const user = process.env.POSTGRES_USER;
-const Pool = require("pg").Pool;
+// const Pool = require("pg").Pool;
+import { Pool } from 'pg';
 
 // Override console.log for production
 if (process.env.NODE_ENV !== "dev") {
@@ -14,7 +15,7 @@ if (process.env.NODE_ENV !== "dev") {
   console.warn = () => {}
 }
 
-const pool = new Pool({
+export const pool = new Pool({
   user: user,
   password: password,
   database: database,
@@ -25,4 +26,4 @@ const pool = new Pool({
 
 // pool.end()
 
-module.exports = pool;
+// module.exports = pool;

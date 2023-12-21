@@ -9,7 +9,7 @@ if (process.env.NODE_ENV !== "dev") {
 }
 
 const _ = require("lodash");
-const stripFeedItem = (feedItem) => {
+export const stripFeedItem = (feedItem) => {
 
   // atom feed items have 'id' instead of 'guid', 
   // so we can either change db
@@ -69,5 +69,3 @@ const stripFeedItem = (feedItem) => {
 
   return feedItem;
 }
-
-module.exports = stripFeedItem;

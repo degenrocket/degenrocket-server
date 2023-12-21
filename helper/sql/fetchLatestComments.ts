@@ -1,4 +1,4 @@
-const pool = require("../../db");
+import { pool } from "../../db";
 
 // Override console.log for production
 if (process.env.NODE_ENV !== "dev") {
@@ -7,7 +7,7 @@ if (process.env.NODE_ENV !== "dev") {
   console.warn = () => {}
 }
 
-const fetchLatestComments = async () => {
+export const fetchLatestComments = async () => {
 
   try {
     // TODO: delete unnecessary fields from query (target, latest_reaction_added_date?) 
@@ -56,5 +56,3 @@ const fetchPosts = async (postsTable, actionsCountTable, joinId, date) => {
     console.error(err);
   }
 }
-
-module.exports = fetchLatestComments;
