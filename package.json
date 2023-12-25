@@ -9,8 +9,10 @@
     "build": "npx tsc",
     "start": "nodemon dist/api/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "prod": "npm run build && pm2 start ecosystem-prod.config.js",
-    "stage": "npm run build && pm2 start ecosystem-stage.config.js"
+    "prod": "npm run build && npm run start-prod",
+    "stage": "npm run build && npm run start-stage",
+    "start-prod": "pm2 start ecosystem-prod.config.js",
+    "start-stage": "pm2 start ecosystem-stage.config.js"
   },
   "author": "",
   "private": "true",
