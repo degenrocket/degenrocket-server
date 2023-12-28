@@ -5,8 +5,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "NODE_ENV=dev nodemon api/index.ts",
-    "build": "npx tsc",
+    "dev-simple": "NODE_ENV=dev nodemon api/index.ts",
+    "dev": "NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node api/index.ts",
+    "build": "rm -rf dist && npx tsc",
     "start": "nodemon dist/api/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "prod": "npm run build && npm run start-prod",

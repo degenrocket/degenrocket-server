@@ -1,5 +1,4 @@
-// Use .js instead of .ts to avoid Bree path issues.
-const fetchPostsFromRssSources = require("../helper/rss/fetchPostsFromRssSources");
+import { fetchPostsFromRssSources } from "../helper/rss/fetchPostsFromRssSources";
 
 // Override console.log for production
 if (process.env.NODE_ENV !== "dev") {

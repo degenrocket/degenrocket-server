@@ -3,6 +3,7 @@ import express, { Express, Request, Response } from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import Bree from "bree";
+import path from 'path';
 import { fetchAllPosts } from "../helper/sql/fetchAllPosts";
 import { fetchPostById } from "../helper/sql/fetchPostById";
 import { fetchPostsByAuthor } from "../helper/sql/fetchPostsByAuthor";
@@ -219,7 +220,25 @@ app.listen(port, () => {
 
 // Bree is used instead of node-cron for scheduled jobs
 const bree = new Bree({
-  jobs : [
+  /**
+    * https://github.com/breejs/bree/tree/master/examples/typescript
+    * Bree works weird with TypeScript, so added npm script to package.json
+    * in order to run Bree in dev mode:
+    * "dev": "NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node api/index.ts",
+    * Always set the root option when doing any type of
+    * compiling with bree. This just makes it clearer where
+    * bree should resolve the jobs folder from. By default it
+    * resolves to the jobs folder relative to where the program
+    * is executed.
+    */
+  root: path.join(__dirname, '../jobs'),
+  /**
+    * We only need the default extension to be "ts"
+    * when we are running the app with ts-node - otherwise
+    * the compiled-to-js code still needs to use JS
+    */
+  defaultExtension: process.env.TS_NODE ? 'ts' : 'js',
+  jobs: [
     // runs the job on Start
     // 'rssFrequencyMediumTimeInterval',
 

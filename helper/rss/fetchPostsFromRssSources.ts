@@ -28,7 +28,17 @@ export const fetchPostsFromRssSources = async (frequency) => {
   let sources = []
 
   if (enableRssModule && enableRssSourcesUpdates) {
-    const absolutePath = path.resolve("./helper/rss/custom/customFeedSources.js");
+    /**
+      * https://github.com/breejs/bree/tree/master/examples/typescript
+      * Bree works weird with TypeScript, so getting sources from .ts file
+      * in dev mode and from .js file in production.
+      */
+    let absolutePath: string
+    if (process.env.NODE_ENV === 'dev') {
+      absolutePath = path.resolve(__dirname, 'custom/customFeedSources.ts')
+    } else {
+      absolutePath = path.resolve(__dirname, 'custom/customFeedSources.js')
+    }
 
     // Check if a file with custom feed sources exists
     if (fs.existsSync(absolutePath)) {
