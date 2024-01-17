@@ -1,8 +1,11 @@
-const nostrTools = require('nostr-tools');
-const { bech32 } = require('bech32');
-const DOMPurify = require('isomorphic-dompurify');
-const ethers = require("ethers");
 import { pool } from "../../db";
+import { UnknownPostOrEvent, NostrEvent, StandardizedEvent } from "../../types/interfaces";
+import { identifyPostOrEvent, standartizePostOrEvent } from "../spasm/identifyEvent";
+import { isObjectWithValues } from "../spasm/utils";
+import DOMPurify from 'isomorphic-dompurify';
+import ethers from "ethers"
+// import nostrTools from 'nostr-tools';
+const nostrTools = require('nostr-tools');
 const enableNewWeb3ActionsAll = process.env.ENABLE_NEW_WEB3_ACTIONS_ALL === 'false' ? false : true;
 const enableNewWeb3ActionsPost = process.env.ENABLE_NEW_WEB3_ACTIONS_POST === 'false' ? false : true;
 const enableNewWeb3ActionsReact = process.env.ENABLE_NEW_WEB3_ACTIONS_REACT === 'false' ? false : true;
@@ -18,109 +21,147 @@ if (process.env.NODE_ENV !== "dev") {
   console.warn = () => {}
 }
 
-export const submitAction = async (body) => {
+/**
+ * There are different ways to submit events to the local db.
+ * - Option 1. Sign a message via UI.
+ *   Frontend will usually send a structured DMP or NostrSpasm
+ *   event, because it knows which protocol (JSON object) is
+ *   signed before sending it to a server.
+ *   Occasionally, frontend can send an unknown event, which most
+ *   likely be either a DMP or NostrSpasm event.
+ * - Option 2. Get a message from another instance.
+ *   Backend, when the SPASM module is activated, fetches posts
+ *   from other instances and tries to submit them to the local
+ *   database, so it will usually send an unknown post, which has
+ *   to be converted/unwrapped into a DMP or NostrSpasm event.
+ * These are the steps to take before submitting the event.
+ * - Check if event is specified as DMP or NostrSpasm event.
+ * - If unknown event, check if it's DMP or NostrSpasm event.
+ * - If not DMP/NostrSpasm event, check if it's a post.
+ * - If a post, check if it's a web3 post.
+ * - If a web3 post, unwrap the signed object.
+ * - Check if signed object is DMP or NostrSpasm object. 
+ */
+
+interface unknownEnvelope {
+  unknownEvent: UnknownPostOrEvent
+}
+
+export const submitAction = async (unknownEnvelope: unknownEnvelope) => {
+  console.log("unknownEnvelope:", unknownEnvelope)
+  if (!('unknownEvent' in unknownEnvelope)) return "No unknownEvent found to submit"
+  if (!isObjectWithValues(unknownEnvelope.unknownEvent)) return "Unknown event is empty"
+
   try {
-    let signedString, signature, signer, target, action, title, text, signedDate
 
-    if (body.dmpEvent) {
-      let { dmpEvent } = body
-      signedString = dmpEvent.signedString
-      signature = dmpEvent.signature
-      signer = dmpEvent.signer
-      const signedObject = JSON.parse(signedString)
-      target = signedObject.target
-      action = signedObject.action
-      title = signedObject.title
-      text = signedObject.text
-      signedDate = signedObject.time
-    } else if (body.nostrEvent) {
-      let { nostrEvent } = body
-      signedString = JSON.stringify(nostrEvent)
-      signature = nostrEvent.sig
-      signer = convertHexToBech32(nostrEvent.pubkey)
+    // Deep copy
+    const unknownPostOrEvent = JSON.parse(JSON.stringify(unknownEnvelope.unknownEvent));
+    const info = identifyPostOrEvent(unknownPostOrEvent)
 
-      nostrEvent.tags.forEach(function (tag) {
-        if (Array.isArray(tag) && tag[0] === "spasm_target") {
-          target = tag[1]
-        }
+    if (!isObjectWithValues(info)) return "Cannot identify an event or post"
 
-        if (Array.isArray(tag) && tag[0] === "spasm_action") {
-          action = tag[1]
-        }
+    if (!info.webType) return "Cannot identify an event or post webType"
 
-        if (Array.isArray(tag) && tag[0] === "spasm_title") {
-          title = tag[1]
-        }
-      });
+    if (!info.eventInfo) return "Cannot identify eventInfo"
 
-      text = nostrEvent.content
+    if (!info.eventInfo.type) return "Cannot identify an event type"
 
-      // Convert the Unix timestamp to a JavaScript Date object
-      const date = new Date(nostrEvent.created_at * 1000);
+    const standartizedEvent: StandardizedEvent | false = standartizePostOrEvent(unknownPostOrEvent, info)
 
-      // Format the date in ISO format
-      const timestamptz = date.toISOString();
+    if (!standartizedEvent) return "Cannot standartize event"
 
-      signedDate = timestamptz
-    } else {
-      return "ERROR: the action is neither Nostr, nor DMP"
+    // Since signedString is also sanitized, it wouldn't be possible
+    // to check the signature and submit a dirty event.
+    const signedString = DOMPurify.sanitize(standartizedEvent.signedString)
+    const signature = DOMPurify.sanitize(standartizedEvent.signature)
+    const signer = DOMPurify.sanitize(standartizedEvent.signer)
+    const target = DOMPurify.sanitize(standartizedEvent.target)
+    const action = DOMPurify.sanitize(standartizedEvent.action)
+    const title = DOMPurify.sanitize(standartizedEvent.title)
+    const text = DOMPurify.sanitize(standartizedEvent.text)
+    const signedDate = DOMPurify.sanitize(standartizedEvent.signedDate)
+
+    // Environment variables
+    if (!enableNewWeb3ActionsAll) {
+      return "ERROR: submitting all new web3 actions is currently disabled"
     }
 
-    const time = new Date(Date.now()).toISOString();
-    // const time = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    // console.log(time)
-    // output: 2012-06-22 05:40:06
+    if (
+      !enableNewNostrActionsAll &&
+      info.eventInfo.privateKey === "nostr"
+    ) {
+      return "ERROR: submitting all new Nostr actions is currently disabled"
+    }
 
-    // Test dirty HTML
-    // text = "<img src=x onerror=alert(1)//>"
+    if (
+      !enableNewEthereumActionsAll &&
+      info.eventInfo.privateKey === "ethereum"
+    ) {
+      return "ERROR: submitting all new Ethereum actions is currently disabled"
+    }
 
-    // signedString is not sanitized because otherwise
-    // it wouldn't be possible to check the signature.
-    signature = DOMPurify.sanitize(signature)
-    signer = DOMPurify.sanitize(signer)
-    target = DOMPurify.sanitize(target)
-    action = DOMPurify.sanitize(action)
-    title = DOMPurify.sanitize(title)
-    text = DOMPurify.sanitize(text)
-    signedDate = DOMPurify.sanitize(signedDate)
-
-    console.log('POST action:', action);
-    console.log('POST target:', target);
-    console.log('POST title:', title);
-    console.log('POST text:', text);
-    console.log('POST signer:', signer);
-    console.log('POST signature:', signature);
-
-    if (!enableNewWeb3ActionsAll) return "ERROR: submitting all new web3 actions is currently disabled"
-
-    if (!enableNewNostrActionsAll && body.nostrEvent) return "ERROR: submitting all new Nostr actions is currently disabled"
-
-    if (!enableNewEthereumActionsAll && body.dmpEvent) return "ERROR: submitting all new Ethereum actions is currently disabled"
-
-    if (!enableNewWeb3ActionsPost && action === 'post') {
+    if (
+      !enableNewWeb3ActionsPost &&
+      action === 'post'
+    ) {
       return "ERROR: submitting new posts is currently disabled"
     }
 
-    if (!enableNewWeb3ActionsReact && action === 'react') {
+    if (
+      !enableNewWeb3ActionsReact &&
+      action === 'react'
+    ) {
       return "ERROR: submitting new reactions is currently disabled"
     }
 
-    if (!enableNewWeb3ActionsReply && action === 'reply') {
+    if (
+      !enableNewWeb3ActionsReply &&
+      action === 'reply'
+    ) {
       return "ERROR: submitting new replies is currently disabled"
     }
 
-    if (!enableNewWeb3ActionsModerate && action === 'moderate') {
+    if (
+      !enableNewWeb3ActionsModerate &&
+      action === 'moderate'
+    ) {
       return "ERROR: submitting new moderation actions is currently disabled"
     }
-    
+
+    // Check if signature is valid
     if (!signature) return "ERROR: signature is null"
 
-    if (body.dmpEvent) {
-      if (!verifyEthereumSignature( signedString, signature, signer )) return "ERROR: invalid signature"
-    } else if (body.nostrEvent) {
-      if (!verifyNostrSignature( body.nostrEvent )) return "ERROR: invalid signature"
+    if (info.eventInfo.privateKey === "ethereum") {
+      if (!verifyEthereumSignature(signedString, signature, signer)) {
+        return "ERROR: invalid Ethereum signature"
+      }
+
+    } else if (info.eventInfo.privateKey === "nostr") {
+
+      let nostrEvent: NostrEvent
+
+      // Unsealed Nostr event
+      if (
+        !info.eventIsSealed &&
+        !info.eventIsSealedUnderKeyName
+      ) {
+        nostrEvent = JSON.parse(JSON.stringify(unknownPostOrEvent));
+
+      // Post with sealed Nostr event
+      } else if (
+        info.eventIsSealed &&
+        typeof(info.eventIsSealedUnderKeyName) === "string"
+      ) {
+        nostrEvent = JSON.parse(
+          unknownPostOrEvent[info.eventIsSealedUnderKeyName]
+        );
+      }
+
+      if (!verifyNostrSignature(nostrEvent)) {
+        return "ERROR: invalid Nostr signature"
+      }
     }
-    
+
     if (await isSignatureAlreadyInDB(signature)) {
       console.log("ERROR: action signature is already in database")
       return "ERROR: action signature is already in database"
@@ -134,9 +175,11 @@ export const submitAction = async (body) => {
     const isToBeIncrementedLater = await isActionUnique(action, target, text, signer)
     console.log('isToBeIncrementedLater:', isToBeIncrementedLater)
 
+    const time = new Date(Date.now()).toISOString();
+
     // Insert reaction signature into db
     // even if this signer has already submitted the same reaction
-    // for this target, but with different signature 
+    // for this target, but with different signature
     const insertSuccess = await insertActionSignature(
       action, target, title, text, signer, signedString, signature, signedDate, time)
 
@@ -156,11 +199,11 @@ export const submitAction = async (body) => {
     console.log("--------------------------------------------")
     return "Sorry, but you've already submitted the same action"
   } catch (err) {
-    console.error('submitReaction failed', body, err);
+    console.error('submitReaction failed', unknownEnvelope, err);
   }
-};
+}
 
-const verifyEthereumSignature = (signedString, signature, signer) => {
+const verifyEthereumSignature = (signedString: string, signature: string, signer: string) => {
   console.log("verifyEthereumSignature called")
   console.log('signedString:', signedString)
   console.log('signature:', signature)
@@ -180,7 +223,7 @@ const verifyEthereumSignature = (signedString, signature, signer) => {
   return false
 }
 
-const verifyNostrSignature = (nostrEvent) => {
+const verifyNostrSignature = (nostrEvent: NostrEvent) => {
   console.log("verifyNostrSignature called")
 
   if (!nostrTools.validateEvent(nostrEvent)) {
@@ -197,7 +240,7 @@ const verifyNostrSignature = (nostrEvent) => {
   return false
 }
 
-const isSignatureAlreadyInDB = async (signature) => {
+const isSignatureAlreadyInDB = async (signature: string) => {
   const tableName = 'actions'
   try {
     const checkSignature = await pool.query(`
@@ -210,10 +253,16 @@ const isSignatureAlreadyInDB = async (signature) => {
   }
 };
 
-const isActionUnique = async (action, target, text, signer) => {
+const isActionUnique = async (
+  action: string,
+  target: string,
+  text: string,
+  signer: string
+) => {
   const tableName = 'actions'
   console.log('tableName in isActionUnique:', tableName)
 
+  // TODO: why action itself is not checked?
   try {
     const checkAction = await pool.query(`
       SELECT * FROM ${tableName}
@@ -229,7 +278,12 @@ const isActionUnique = async (action, target, text, signer) => {
 
 // Reactions_count table is needed to easily fetch all reaction counts
 // instead of computing reaction counts for each target upon request.
-const incrementActionsCountTable = async (action, target, text, time) => {
+const incrementActionsCountTable = async (
+  action: string,
+  target: string,
+  text: string,
+  time: string
+): Promise<boolean> => {
   console.log("increment action:", action);
   console.log("increment target:", target);
   console.log("increment text:", text);
@@ -286,38 +340,29 @@ const incrementActionsCountTable = async (action, target, text, time) => {
 // Variables are passed in a parameterized query to prevent SQL injections.
 // TODO: pass table name to a function depending on the action.
 const insertActionSignature = async (
-  action, target, title, text, signer, signedString, signature, signedDate, time) => {
-    console.log("inserting target:", target)
-    const tableName = 'actions'
-    try {
-      const newAction = await pool.query(
-        `INSERT INTO ${tableName}
-        (action, target, title, text, signer, signed_message, signature, signed_time, added_time)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
-        // RETURNING *`
-        , [action, target, title, text, signer, signedString, signature, signedDate, time]
-      );
-      console.log("Action has beed inserted")
-      return true
-    } catch (err) {
-      console.error('insertActionSignature failed', target, err);
-    }
-  };
-
-// Utils
-const convertHexToBech32 = (hexKey, prefix?) => {
-  // Convert private or public key from HEX to bech32
-  let bytes = new Uint8Array(hexKey.length / 2);
-
-  for(let i = 0; i < hexKey.length; i+=2) {
-      bytes[i/2] = parseInt(hexKey.substr(i, 2), 16);
+  action: string,
+  target: string,
+  title: string,
+  text: string,
+  signer: string,
+  signedString: string,
+  signature: string,
+  signedDate: string,
+  time: string
+) => {
+  console.log("inserting target:", target)
+  const tableName = 'actions'
+  try {
+    const newAction = await pool.query(
+      `INSERT INTO ${tableName}
+      (action, target, title, text, signer, signed_message, signature, signed_time, added_time)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+      // RETURNING *`
+      , [action, target, title, text, signer, signedString, signature, signedDate, time]
+    );
+    console.log("Action has beed inserted")
+    return true
+  } catch (err) {
+    console.error('insertActionSignature failed', target, err);
   }
-
-  const words = bech32.toWords(bytes);
-
-  prefix = prefix ?? 'npub'
-
-  const bech32Key = bech32.encode(prefix, words);
-
-  return bech32Key
-}
+};

@@ -2,6 +2,8 @@
 # Custom files for each instance
 helper/rss/custom/customFeedSources.js
 helper/rss/custom/customFeedSources.ts
+helper/spasm/custom/customSpasmSources.js
+helper/spasm/custom/customSpasmSources.ts
 
 ### Node template
 # Logs
