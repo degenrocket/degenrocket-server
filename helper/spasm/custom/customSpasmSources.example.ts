@@ -11,14 +11,11 @@ export const spasmSourcesFrequencyHigh =
     // sources are sorted by name
     // {
     //   name: "",
-    //   url: "",
+    //   uiUrl: "",
+    //   apiUrl: "",
     //   query: "",
+    //   showSource: true
     // },
-    {
-      name: "degenrocket.space",
-      url: "https://degenrocket.space/api/posts",
-      query: "?webType=web3&category=any&platform=false&source=false&activity=hot&keyword=false&ticker=false&limitWeb2=0&limitWeb3=20",
-    },
   ];
 
 export const spasmSourcesFrequencyMedium =
@@ -26,9 +23,11 @@ export const spasmSourcesFrequencyMedium =
     // ====================================
     // sources are sorted by name
     // {
-    //   name: "degenrocket.space",
-    //   url: "https://degenrocket.space/api/posts",
-    //   query: "?webType=web3&category=any&platform=false&source=false&activity=hot&keyword=false&ticker=false&limitWeb2=0&limitWeb3=20",
+    //   name: "",
+    //   uiUrl: "",
+    //   apiUrl: "",
+    //   query: "",
+    //   showSource: true
     // },
   ];
 
@@ -38,9 +37,19 @@ export const spasmSourcesFrequencyLow =
     // sources are sorted by name
     // {
     //   name: "",
-    //   url: "",
+    //   uiUrl: "",
+    //   apiUrl: "",
     //   query: "",
+    //   showSource: true
     // },
+
+    {
+      name: "degenrocket.space",
+      uiUrl: "https://degenrocket.space/news/",
+      apiUrl: "https://degenrocket.space/api/",
+      query: "posts?webType=web3&category=any&platform=false&source=false&activity=hot&keyword=false&ticker=false&limitWeb2=0&limitWeb3=10",
+      showSource: true
+    },
   ];
 
 // Test sources are used for testing the RSS module
@@ -50,8 +59,10 @@ export const spasmSourcesFrequencyTest =
     // sources are sorted by name
     // {
     //   name: "",
-    //   url: "",
+    //   uiUrl: "",
+    //   apiUrl: "",
     //   query: "",
+    //   showSource: true
     // },
   ];
 
@@ -62,7 +73,9 @@ export const spasmSourcesArchived =
     // sources are sorted by name
     // {
     //   name: "",
-    //   url: "",
+    //   uiUrl: "",
+    //   apiUrl: "",
     //   query: "",
+    //   showSource: true
     // },
   ];

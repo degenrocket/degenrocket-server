@@ -2,10 +2,9 @@ import { pool } from "../../db";
 import { UnknownPostOrEvent, NostrEvent, StandardizedEvent } from "../../types/interfaces";
 import { identifyPostOrEvent, standartizePostOrEvent } from "../spasm/identifyEvent";
 import { isObjectWithValues } from "../spasm/utils";
-import DOMPurify from 'isomorphic-dompurify';
-import ethers from "ethers"
-// import nostrTools from 'nostr-tools';
+const ethers = require("ethers");
 const nostrTools = require('nostr-tools');
+const DOMPurify = require('isomorphic-dompurify');
 const enableNewWeb3ActionsAll = process.env.ENABLE_NEW_WEB3_ACTIONS_ALL === 'false' ? false : true;
 const enableNewWeb3ActionsPost = process.env.ENABLE_NEW_WEB3_ACTIONS_POST === 'false' ? false : true;
 const enableNewWeb3ActionsReact = process.env.ENABLE_NEW_WEB3_ACTIONS_REACT === 'false' ? false : true;
