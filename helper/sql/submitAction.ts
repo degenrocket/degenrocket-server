@@ -12,6 +12,9 @@ const enableNewWeb3ActionsReply = process.env.ENABLE_NEW_WEB3_ACTIONS_REPLY === 
 const enableNewWeb3ActionsModerate = process.env.ENABLE_NEW_WEB3_ACTIONS_MODERATE === 'false' ? false : true;
 const enableNewNostrActionsAll = process.env.ENABLE_NEW_NOSTR_ACTIONS_ALL === 'false' ? false : true;
 const enableNewEthereumActionsAll = process.env.ENABLE_NEW_ETHEREUM_ACTIONS_ALL === 'false' ? false : true;
+const env = process?.env
+const enableModeration = env.ENABLE_MODERATION === 'false' ? false : true;
+const moderators: string[] = typeof(env?.MODERATORS) === "string" ? env?.MODERATORS.split(',') : []
 
 // Override console.log for production
 if (process.env.NODE_ENV !== "dev") {
@@ -166,6 +169,11 @@ export const submitAction = async (unknownEnvelope: unknownEnvelope) => {
       return "ERROR: action signature is already in database"
     }
 
+    if (await isActionBanned(signature)) {
+      console.log("ERROR: action signature is banned")
+      return "ERROR: action signature is banned"
+    }
+
     // Increment reactions_count table if user
     // didn't have the same reaction before.
     // Uniqueness is checked before the insertion
@@ -176,15 +184,42 @@ export const submitAction = async (unknownEnvelope: unknownEnvelope) => {
 
     const time = new Date(Date.now()).toISOString();
 
-    // Insert reaction signature into db
-    // even if this signer has already submitted the same reaction
-    // for this target, but with different signature
-    const insertSuccess = await insertActionSignature(
-      action, target, title, text, signer, signedString, signature, signedDate, time)
+    // Moderation
+    if (
+      action === "moderate" &&
+      text === "delete"
+    ) {
+      if (!enableModeration) return "The moderation is disabled"
+      if (!signer) return "There is no signer"
+      if (typeof(signer) !== "string") return "Signer is invalid"
+      if (!Array.isArray(moderators)) return "Moderators are not set"
+      if (!moderators.includes(signer)) return "You're not a moderator"
 
-    if (!insertSuccess) return "ERROR: signature was not saved into database"
+      const insertSuccess = await insertActionSignature(
+        action, target, title, text, signer, signedString, signature, signedDate, time)
 
-    if (isToBeIncrementedLater) {
+      if (!insertSuccess) return "ERROR: signature was not saved into database"
+
+      const deleteSuccess = await deleteAction(
+        action, target, text, time);
+
+        return deleteSuccess
+          ? "Success. Action saved and target deleted"
+          : "Action saved, but target not deleted"
+
+    // Reaction, reply, post
+    } else if (
+      isToBeIncrementedLater &&
+      action !== "moderate"
+    ) {
+      // Insert reaction signature into db
+      // even if this signer has already submitted the same reaction
+      // for this target, but with different signature
+      const insertSuccess = await insertActionSignature(
+        action, target, title, text, signer, signedString, signature, signedDate, time)
+
+      if (!insertSuccess) return "ERROR: signature was not saved into database"
+
       console.log("Action was unique, time to increment it now")
       const incrementSuccess = await incrementActionsCountTable(
         action, target, text, time);
@@ -193,6 +228,13 @@ export const submitAction = async (unknownEnvelope: unknownEnvelope) => {
       return incrementSuccess
         ? "Success. Action has been saved and incremented"
         : "Action has been saved, but count was not incremented"
+
+    // Catch all (e.g., 'moderate' event, but not 'delete')
+    } else {
+      const insertSuccess = await insertActionSignature(
+        action, target, title, text, signer, signedString, signature, signedDate, time)
+
+      if (!insertSuccess) return "ERROR: signature was not saved into database"
     }
 
     console.log("--------------------------------------------")
@@ -275,6 +317,88 @@ const isActionUnique = async (
   }
 };
 
+const deleteAction = async (
+  action: string,
+  target: string,
+  text: string,
+  time: string
+): Promise<boolean> => {
+  const tableNameWeb2 = 'posts'
+  const tableNameWeb3 = 'actions'
+  try {
+    // web2 posts (e.g. RSS)
+    if (action === 'moderate' && text === 'delete') {
+      const updateString = `
+      DELETE FROM ${tableNameWeb2}
+      WHERE url = $1`
+      const updateValues = [target]
+      await pool.query(updateString, updateValues)
+    }
+
+    // web3 posts (e.g. DMP, Nostr)
+    if (action === 'moderate' && text === 'delete') {
+      const updateString = `
+      DELETE FROM ${tableNameWeb3}
+      WHERE signature = $1`
+      const updateValues = [target]
+      await pool.query(updateString, updateValues)
+    }
+
+    return true
+  } catch (err) {
+    console.error('moderation failed', target, err);
+  }
+  console.log("The end of moderation function. It should show up only on error");
+  return false
+};
+
+/**
+ * The action can be banned via different moderation events,
+ * e.g. via the 'delete' event. It's important to prevent
+ * banned events from being re-inserted into the database.
+ * For example, post 123 was fetched by instance ABC from
+ * instance XYZ via the SPASM module. The post got deleted
+ * by the moderator of the ABC instance. After a few minutes,
+ * instance ABC is fetching posts from instance XYZ again,
+ * but it should not insert post 123 into the database since
+ * it has been previously deleted by the moderator. Banned
+ * posts should also be rejected in they come from multiple
+ * other instances.
+ */
+const isActionBanned = async (
+  signature: string
+): Promise<boolean> => {
+  if (!signature) return false
+
+  const tableName = 'actions'
+  const deleteAction = 'moderate'
+  const deleteText = 'delete'
+
+  try {
+    const checkSignature = await pool.query(`
+      SELECT * FROM ${tableName}
+      WHERE target = $1
+      AND action = $2
+      AND text = $3`
+      , [signature, deleteAction, deleteText])
+    // TODO? Allow post if signer is not a moderator anymore?
+    // Get array of signers from each 'delete' moderate event,
+    // check if any of the signers is a valid moderator,
+    // return true if at least one signer is a valid moderator.
+    // E.g., if a moderator became malicious, banned many posts,
+    // but then got removed from the moderators list.
+    // Although, in that situation an admin can manually delete
+    // all actions of that moderator from the database after
+    // the timestamp when the moderator became malicious.
+    // Thus, posts banned by the malicious moderator won't be
+    // banned anymore.
+    return checkSignature.rowCount > 0 ? true : false
+  } catch (err) {
+    console.error('isActionBanned failed', signature, err);
+    return false
+  }
+};
+
 // Reactions_count table is needed to easily fetch all reaction counts
 // instead of computing reaction counts for each target upon request.
 const incrementActionsCountTable = async (
@@ -334,6 +458,7 @@ const incrementActionsCountTable = async (
     console.error('incrementActionsCountTable failed', target, err);
   }
   console.log("The end of incrementing function. It should show up only on error");
+  return false
 };
 
 // Variables are passed in a parameterized query to prevent SQL injections.

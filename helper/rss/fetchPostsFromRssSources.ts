@@ -106,9 +106,46 @@ export const fetchPostsFromRssSources = async (frequency) => {
     }
   };
 
+  // Don't insert a post if it has been previously banned, e.g.,
+  // via the 'delete' moderation event by valid moderators.
+  const isPostBanned = async (
+    url: string
+  ): Promise<boolean> => {
+    if (!url) return false
+    console.log(`checking if this url/guid is banned: ${url}`)
+
+    const tableName = 'actions'
+    const deleteAction = 'moderate'
+    const deleteText = 'delete'
+
+    try {
+      const checkSignature = await pool.query(`
+        SELECT * FROM ${tableName}
+        WHERE target = $1
+        AND action = $2
+        AND text = $3`
+        , [url, deleteAction, deleteText])
+      return checkSignature.rowCount > 0 ? true : false
+    } catch (err) {
+      console.error('isPostBanned failed', url, err);
+      return false
+    }
+  };
+
   // insert item into database
   const insertData = async (item) => {
     console.log("inserting data")
+
+    if (await isPostBanned(item?.link)) {
+      console.log("The url is banned:", item?.link)
+      return `The url is banned: ${item?.link}`
+    }
+
+    if (await isPostBanned(item?.guid)) {
+      console.log("The guid is banned:", item?.guid)
+      return `The guid is banned: ${item?.guid}`
+    }
+
     try {
       const newPost = await pool.query(`
         INSERT INTO posts (guid, source, category, tickers, title, url, description, pubdate)
