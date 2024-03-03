@@ -1,11 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import axios, { AxiosResponse } from 'axios';
-import { SpasmSource, Post } from "../../types/interfaces";
+import { SpasmSource, Post, IgnoreWhitelistFor } from "../../types/interfaces";
 import { submitAction } from "../sql/submitAction";
 // SPASM module is disabled by default
 const enableSpasmModule: boolean = process.env.ENABLE_SPASM_MODULE === 'true' ? true : false
 const enableSpasmSourcesUpdates: boolean = process.env.ENABLE_SPASM_SOURCES_UPDATES === 'true' ? true : false
+const env = process?.env
+const ignoreWhitelistForActionPostInSpasmModule: boolean = env?.IGNORE_WHITELIST_FOR_ACTION_POST_IN_SPASM_MODULE === 'false' ? false : true
 
 // Override console.log for production
 if (process.env.NODE_ENV !== "dev") {
@@ -82,13 +84,27 @@ export const fetchPostsFromSpasmSources = async (frequency?: string) => {
 
       console.log("fetchUrl:", fetchUrl)
 
+      // Admins can choose to insert actions received from
+      // other instances of the network even if they were signed
+      // by non-whitelisted addresses.
+      // In other words, admins can choose to trust other
+      // instances to properly protect their instances,
+      // e.g., from spam and low-quality content.
+      const ignoreWhitelistFor = new IgnoreWhitelistFor()
+      if (ignoreWhitelistForActionPostInSpasmModule) {
+        ignoreWhitelistFor.action.post = true
+      }
+
       type ApiResponse = Post[]
 
       const response: AxiosResponse<ApiResponse> = await axios.get<ApiResponse>(fetchUrl);
 
       if (response.data) {
         await Promise.all(response.data.map((post) =>
-          submitAction({ unknownEvent: post })
+          submitAction(
+            { unknownEvent: post },
+            ignoreWhitelistFor
+          )
         ))
       } else {
         console.log("data for submitAction is null")

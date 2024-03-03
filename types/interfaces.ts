@@ -243,3 +243,21 @@ export interface SpasmSource {
   query?: string
   showSource?: boolean
 }
+
+export class IgnoreWhitelistFor {
+  action: {
+    post: boolean
+    reply: boolean
+    react: boolean
+    moderate: boolean
+  }
+
+  constructor() {
+    this.action = {
+      post: false,
+      reply: false,
+      react: false,
+      moderate: false
+    }
+  }
+}

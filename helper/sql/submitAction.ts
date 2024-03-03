@@ -1,5 +1,8 @@
 import { pool } from "../../db";
-import { UnknownPostOrEvent, NostrEvent, StandardizedEvent } from "../../types/interfaces";
+import {
+  UnknownPostOrEvent, NostrEvent,
+  StandardizedEvent, IgnoreWhitelistFor
+} from "../../types/interfaces";
 import { identifyPostOrEvent, standartizePostOrEvent } from "../spasm/identifyEvent";
 import { isObjectWithValues } from "../spasm/utils";
 const ethers = require("ethers");
@@ -14,7 +17,9 @@ const enableNewNostrActionsAll = process.env.ENABLE_NEW_NOSTR_ACTIONS_ALL === 'f
 const enableNewEthereumActionsAll = process.env.ENABLE_NEW_ETHEREUM_ACTIONS_ALL === 'false' ? false : true;
 const env = process?.env
 const enableModeration = env.ENABLE_MODERATION === 'false' ? false : true;
-const moderators: string[] = typeof(env?.MODERATORS) === "string" ? env?.MODERATORS.split(',') : []
+const moderators: string[] = typeof(env?.MODERATORS) === "string" ? env?.MODERATORS.split(',') : [];
+const enableWhitelistForActionPost: boolean = env?.ENABLE_WHITELIST_FOR_ACTION_POST === 'true' ? true : false;
+const whitelistedForActionPost: string[] = typeof(env?.WHITELISTED_FOR_ACTION_POST) === 'string' ? env?.WHITELISTED_FOR_ACTION_POST.split(',') : [];
 
 // Override console.log for production
 if (process.env.NODE_ENV !== "dev") {
@@ -49,7 +54,10 @@ interface unknownEnvelope {
   unknownEvent: UnknownPostOrEvent
 }
 
-export const submitAction = async (unknownEnvelope: unknownEnvelope) => {
+export const submitAction = async (
+  unknownEnvelope: unknownEnvelope,
+  ignoreWhitelistFor = new IgnoreWhitelistFor()
+) => {
   console.log("unknownEnvelope:", unknownEnvelope)
   if (!('unknownEvent' in unknownEnvelope)) return "No unknownEvent found to submit"
   if (!isObjectWithValues(unknownEnvelope.unknownEvent)) return "Unknown event is empty"
@@ -128,6 +136,23 @@ export const submitAction = async (unknownEnvelope: unknownEnvelope) => {
       action === 'moderate'
     ) {
       return "ERROR: submitting new moderation actions is currently disabled"
+    }
+
+    // Abort the function if the signer is not whitelisted to
+    // submit new post actions, but only if a white list is
+    // enabled and ignoreWhitelist is set to false.
+    // Flag ignoreWhitelist is used when e.g. posts are received
+    // from other instances of the network via the SPASM module.
+    if (
+      action === 'post' &&
+      enableWhitelistForActionPost &&
+      signer &&
+      typeof(signer) === 'string' &&
+      !whitelistedForActionPost.includes(signer.toLowerCase()) &&
+      !ignoreWhitelistFor?.action?.post
+    ) {
+      console.log("ERROR: this address is not whitelisted to submit new posts")
+      return "ERROR: this address is not whitelisted to submit new posts"
     }
 
     // Check if signature is valid
