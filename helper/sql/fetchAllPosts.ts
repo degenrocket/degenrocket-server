@@ -140,7 +140,7 @@ const fetchPosts = async (webType: FiltersWebType, filters: FeedFilters) => {
       // Refactored: filters.category is passed as a parameter
       // in a parameterized query to prevent SQL injections.
       searchQuery += `
-      AND (category = $1)`
+      AND (category = $2)`
     }
 
     // Action (post, react, reply) is needed for web3 only
@@ -174,31 +174,49 @@ const fetchPosts = async (webType: FiltersWebType, filters: FeedFilters) => {
         )`
     } 
 
-    let searchLimit = 20 
+    const searchLimitDefault = 20
+    const searchLimitMax = 250
+
+    let searchLimit = searchLimitDefault 
 
     switch (webType) {
+      // The nullish coalescing operator (??) only checks for
+      // null and undefined, so 0 is a valid value.
       case 'web3':
-        searchLimit = filters.limitWeb3
+        searchLimit = filters.limitWeb3 ?? searchLimitDefault;
         break
       case 'web2':
-        searchLimit = filters.limitWeb2
+        searchLimit = filters.limitWeb2 ?? searchLimitDefault;
         break
       default:
-        searchLimit = 20
+        searchLimit = searchLimitDefault;
     }
+
+    // Convert searchLimit to a number if it's not already
+    searchLimit = Number(searchLimit);
+
+    // Handle NaN if conversion above has failed, e.g., if
+    // filter limits have letters like '123abc'.
+    if (isNaN(searchLimit)) {
+     searchLimit = searchLimitDefault; // Fallback to default
+    }
+
+    // Ensure searchLimit does not exceed max value
+    searchLimit = Math.min(searchLimit, searchLimitMax);
 
     searchQuery += `
       ORDER BY ${date} DESC
-      LIMIT COALESCE(${searchLimit}, 20)`
+      LIMIT COALESCE($1, 20)`
 
-      // filters.category is passed as a parameter to a parameterized query
-      // to prevent SQL injections.
+      // searchLimit and filters.category are passed as
+      // parameters to a parameterized query to prevent
+      // SQL injections.
       let allPosts
       if (!filters.category || filters.category === 'any') {
         // When category is null or 'any', we don't add a parameter to a query
-        allPosts = await pool.query(searchQuery);
+        allPosts = await pool.query(searchQuery, [searchLimit]);
       } else {
-        allPosts = await pool.query(searchQuery, [filters.category]);
+        allPosts = await pool.query(searchQuery, [searchLimit, filters.category]);
       }
 
       return allPosts.rows
