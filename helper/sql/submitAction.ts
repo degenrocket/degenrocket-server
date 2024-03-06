@@ -17,9 +17,16 @@ const enableNewNostrActionsAll = process.env.ENABLE_NEW_NOSTR_ACTIONS_ALL === 'f
 const enableNewEthereumActionsAll = process.env.ENABLE_NEW_ETHEREUM_ACTIONS_ALL === 'false' ? false : true;
 const env = process?.env
 const enableModeration = env.ENABLE_MODERATION === 'false' ? false : true;
-const moderators: string[] = typeof(env?.MODERATORS) === "string" ? env?.MODERATORS.split(',') : [];
-const enableWhitelistForActionPost: boolean = env?.ENABLE_WHITELIST_FOR_ACTION_POST === 'true' ? true : false;
-const whitelistedForActionPost: string[] = typeof(env?.WHITELISTED_FOR_ACTION_POST) === 'string' ? env?.WHITELISTED_FOR_ACTION_POST.split(',') : [];
+const moderators: string[] =
+  typeof(env?.MODERATORS) === "string"
+  ? env?.MODERATORS.toLowerCase().split(',')
+  : [];
+const enableWhitelistForActionPost: boolean =
+  env?.ENABLE_WHITELIST_FOR_ACTION_POST === 'true' ? true : false;
+const whitelistedForActionPost: string[] =
+  typeof(env?.WHITELISTED_FOR_ACTION_POST) === 'string'
+  ? env?.WHITELISTED_FOR_ACTION_POST.toLowerCase().split(',')
+  : [];
 
 // Override console.log for production
 if (process.env.NODE_ENV !== "dev") {
