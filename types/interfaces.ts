@@ -42,35 +42,35 @@ export type PostAction = Web3MessageAction | null | undefined
 export interface Post {
   // web2 & web3
   // Each post might have different IDs on different servers
-  id?: PostId
+  id?: PostId // dbId in SpasmEvent
 
   // web2 only
   // guid, source, author, url, description, pubdate
   // are usually taken from the RSS feed.
-  guid?: string | null
-  source?: string | null
-  author?: string | null
-  url?: PostUrl
-  description?: string | null
-  pubdate?: string | null
+  guid?: string | null // eventId in SpasmEvent
+  source?: string | null // source in SpasmEvent
+  author?: string | null // author in SpasmEvent
+  url?: PostUrl // links.http|ipfs|etc in SpasmEvent
+  description?: string | null // content in SpasmEvent
+  pubdate?: string | null // timestamp in SpasmEvent
 
   // web3 only
-  target?: string | null
-  action?: PostAction
-  text?: string | null
-  signer?: string | null
-  signed_message?: string | null
-  signature?: PostSignature
-  signed_time?: string | null
-  added_time?: string | null
-  ipfs? : string | null
+  target?: string | null // parentEvent in SpasmEvent
+  action?: PostAction // action in SpasmEvent
+  text?: string | null // content in SpasmEvent
+  signer?: string | null // author in SpasmEvent
+  signed_message?: string | null // originalEventString in SpasmEvent
+  signature?: PostSignature // signature in SpasmEvent
+  signed_time?: string | null // timestamp in SpasmEvent
+  added_time?: string | null // dbTimestamp in SpasmEvent
+  ipfs? : string | null // links.ipfs in SpasmEvent
 
   // web2 & web3
-  tickers?: string[] | null
-  title?: string | null
-  category?: string | null
-  tags?: string[] | null
-  upvote?: number | null
+  tickers?: string[] | null // keywords in SpasmEvent
+  title?: string | null // title in SpasmEvent
+  category?: string | null // category in SpasmEvent
+  tags?: string[] | null // spasmEvent.tags ??
+  upvote?: number | null // spasmEvent.reactions.upvote
   downvote?: number | null
   bullish?: number | null
   bearish?: number | null
@@ -185,40 +185,120 @@ export interface DmpEventSignedOpened extends DmpEventSignedClosed {
   signedObject: DmpEvent
 }
 
+export type EventType =
+  "DmpEvent" |
+  "DmpEventSignedClosed" |
+  "DmpEventSignedOpened" |
+  "NostrEvent" |
+  "NostrEventSignedOpened" |
+  "NostrSpasmEvent" |
+  "NostrSpasmEventSignedOpened" |
+  "SpasmEvent" |
+  "unknown"
+
 export type SpasmVersion = "1.0.0" | string | false
 
 export type EventBaseProtocol = "dmp" | "nostr" | "spasm" | false
 
 export type EventBaseProtocolVersion = "dmp_v0.1.0" | string | false
 
-export type EventPrivateKey = "ethereum" | "nostr" | false
+export type ExtraSpasmFieldsVersion = "1.0.0" | string
+
+export type EventPrivateKeyType = "ethereum" | "nostr"
 
 export type EventProtocolCryptography = "schnorr" | "secp256k1" | string | false
 
 export type SpasmAction = Web3MessageAction
 
-export interface SpasmEvent {
-  protocol: "spasm"
-  spasmVersion: SpasmVersion
+export interface HashesObject {
+  sha1?: string
+  sha256?: string
+  infohash?: string
+  ipfs?: string
+}
+
+export interface LinksObject {
+  http?: string
+  ipfs?: string
+  torrent?: string
+}
+
+export type MimeType =
+  | "image/jpeg" | "image/png" | "image/gif" | "image/webp"
+  | "image/svg+xml"
+  | "audio/mpeg" | "audio/ogg" | "audio/wav"
+  | "video/mp4" | "video/ogg" | "video/webm"
+  | "text/plain" | "text/html" | "text/css" | "text/javascript"
+  | "application/json" | "application/xml" | "application/pdf"
+  | "application/octet-stream";
+
+export interface EventMedia {
+  hashes?: HashesObject
+  links?: LinksObject
+  type?: MimeType
+}
+
+export interface EventReactions {
+  upvote?: number | null
+  downvote?: number | null
+  bullish?: number | null
+  bearish?: number | null
+  important?: number | null
+  scam?: number | null
+  comments_count?: number | null
+  latest_action_added_time?: string | null
+}
+
+export interface SpasmEventMeta {
   baseProtocol?: EventBaseProtocol
   baseProtocolVersion?: EventBaseProtocolVersion
-  privateKey?: EventPrivateKey
+  hasExtraSpasmFields?: boolean
+  extraSpasmFieldsVersion?: ExtraSpasmFieldsVersion
+  convertedFrom?: EventType
+  privateKeyType?: EventPrivateKeyType
   cryptography?: EventProtocolCryptography
-  spasm_id?: string
-  root?: string
-  parent?: string
+  hashes?: HashesObject
+  previousEvent?: string | number
+  sequence?: number
+  powNonce?: string
+  license?: string
+  language?: string
+}
+
+export interface SpasmEventMetaSigned extends SpasmEventMeta {
+  privateKeyType: EventPrivateKeyType
+  // cryptography is a bit unclear, so for now it's optional
+  cryptography?: EventProtocolCryptography
+}
+
+export interface SpasmEvent {
+  meta?: SpasmEventMeta
+  spasmVersion?: SpasmVersion
+  spasmId?: string | number
+  eventId?: string | number
+  dbId?: number | string
+  rootEvent?: string
+  parentEvent?: string
   action?: string
   title?: string
-  content: string
-  timestamp?: string
-  author: string
+  content?: string
+  source?: string
+  timestamp?: number
+  dbTimestamp?: number | string
+  author?: string
   category?: string
+  links?: LinksObject
+  keywords?: string[] | string
   tags?: any[][]
-  keywords?: string[]
-  license?: string
+  media?: EventMedia
+  referencedEvents?: string[]
+  referencedAuthors?: string[]
   extra?: any
-  metadata?: any
-  originalEvent: DmpEvent | NostrSpasmEventSignedOpened
+  originalEventObject?: UnknownPostOrEvent
+  originalEventString?: string
+  reactions?: EventReactions
+  comments?: any[]
+  signature?: string
 }
 
 export interface SpasmEventSignedOpened extends SpasmEvent {
