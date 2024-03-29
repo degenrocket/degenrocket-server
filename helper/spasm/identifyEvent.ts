@@ -1,4 +1,4 @@
-import { EventBaseProtocol, EventPrivateKey, UnknownPostOrEvent, UnknownEvent, DmpEvent, DmpEventSignedClosed, NostrEvent, NostrSpasmEvent, NostrSpasmEventSignedOpened, Post, NostrSpasmTag, AnyTag, StandardizedEvent } from "../../types/interfaces";
+import { EventBaseProtocol, EventPrivateKeyType, UnknownPostOrEvent, UnknownEvent, DmpEvent, DmpEventSignedClosed, NostrEvent, NostrSpasmEvent, NostrSpasmEventSignedOpened, Post, NostrSpasmTag, AnyTag, StandardizedEvent } from "../../types/interfaces";
 import { isObjectWithValues, convertHexToBech32 } from "./utils";
 
 // Override console.log for production
@@ -77,9 +77,9 @@ if (process.env.NODE_ENV !== "dev") {
 //     │   ├── pubkey*
 //     │   └── tags*
 //     │       ├── spasm_version*
-//     │       ├── spasm_target*
-//     │       ├── spasm_action*
-//     │       └── spasm_title*
+//     │       ├── spasm_target?
+//     │       ├── spasm_action?
+//     │       └── spasm_title?
 //     │
 //     │   isNostrSpasmEventSignedOpened()
 //     └── Nostr SPASM event signed
@@ -91,9 +91,9 @@ if (process.env.NODE_ENV !== "dev") {
 //         ├── pubkey*
 //         └── tags*
 //             ├── spasm_version*
-//             ├── spasm_target*
-//             ├── spasm_action*
-//             └── spasm_title*
+//             ├── spasm_target?
+//             ├── spasm_action?
+//             └── spasm_title?
 //   
 
 type EventType =
@@ -113,7 +113,7 @@ interface EventInfo {
   type: EventInfoType | false
   hasSignature: boolean
   baseProtocol: EventBaseProtocol | false
-  privateKey: EventPrivateKey | false
+  privateKey: EventPrivateKeyType | false
   isSpasmCompatible: boolean
   hasExtraSpasmFields: boolean
   license: string | false
