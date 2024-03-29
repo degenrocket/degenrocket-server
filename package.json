@@ -32,7 +32,8 @@
     "lodash": "^4.17.21",
     "nostr-tools": "^1.17.0",
     "pg": "^8.11.3",
-    "rss-parser": "^3.13.0"
+    "rss-parser": "^3.13.0",
+    "spasm.js": "^1.0.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
