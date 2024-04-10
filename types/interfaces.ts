@@ -284,7 +284,7 @@ export interface SpasmEvent {
   content?: string
   source?: string
   timestamp?: number
-  dbTimestamp?: number | string
+  dbTimestamp?: number
   author?: string
   category?: string
   links?: LinksObject

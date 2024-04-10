@@ -29,7 +29,7 @@ export const fetchPostsFromSpasmSources = async (frequency?: string) => {
 
   // console.log('process.env.NODE_ENV =', process.env.NODE_ENV)
   const time = new Date(Date.now()).toISOString();
-  console.error('fetchPostsFromSpasmSources is called at:', time)
+  console.log('fetchPostsFromSpasmSources is called at:', time)
 
   let sources = []
 
