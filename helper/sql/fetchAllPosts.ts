@@ -152,10 +152,10 @@ const fetchPosts = async (webType: FiltersWebType, filters: FeedFilters) => {
 
     switch (filters.activity) {
       case 'hot':
-        filtersActivityCount = 2
+        filtersActivityCount = 5
         break
       case 'rising':
-        filtersActivityCount = 1
+        filtersActivityCount = 3
         break
       default:
         filtersActivityCount = 0
@@ -183,10 +183,10 @@ const fetchPosts = async (webType: FiltersWebType, filters: FeedFilters) => {
       // The nullish coalescing operator (??) only checks for
       // null and undefined, so 0 is a valid value.
       case 'web3':
-        searchLimit = filters.limitWeb3 ?? searchLimitDefault;
+        searchLimit = Number(filters.limitWeb3) ?? searchLimitDefault;
         break
       case 'web2':
-        searchLimit = filters.limitWeb2 ?? searchLimitDefault;
+        searchLimit = Number(filters.limitWeb2) ?? searchLimitDefault;
         break
       default:
         searchLimit = searchLimitDefault;

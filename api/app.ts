@@ -59,6 +59,8 @@ app.get("/api/posts", async(req: Request, res: Response) => {
   }
 })
 
+// Examples:
+// /api/posts/search?p=abc123
 app.get("/api/posts/:id", async(req: Request, res: Response) => {
   // console.log('req.params.id in /api/posts/:id is:', req.params.id)
   // console.log('req.params in /api/posts/:id is:', req.params)
@@ -130,10 +132,22 @@ app.get("/api/posts/actions/:id", async(req: Request, res: Response) => {
 })
 
 // Fetch latest comments
-app.get("/api/comments/", async(_: Request, res: Response) => {
+app.get("/api/comments/", async(req: Request, res: Response) => {
   console.log("/api/comments/ called") 
+  const q: QueryFeedFilters = req.query
+  const filters: FeedFilters = {
+    webType: q.webType && q.webType !== 'false' ? q.webType : null,
+    category: q.category && q.category !== 'false' ? q.category : null,
+    platform: q.platform && q.platform !== 'false' ? q.platform : null,
+    source: q.source && q.source !== 'false' ? q.source : null,
+    activity: q.activity && q.activity !== 'false' ? q.activity : null,
+    keyword: q.keyword && q.keyword !== 'false' ? q.keyword : null,
+    ticker: q.ticker && q.ticker !== 'false' ? q.ticker : null,
+    limitWeb2: q.limitWeb2 && q.limitWeb2 !== 'false' ? q.limitWeb2 : null,
+    limitWeb3: q.limitWeb3 && q.limitWeb3 !== 'false' ? q.limitWeb3 : null
+  }
   try {
-    const latestComments = await fetchLatestComments()
+    const latestComments = await fetchLatestComments(filters)
     res.json(latestComments);
   } catch (err) {
     console.error(err);

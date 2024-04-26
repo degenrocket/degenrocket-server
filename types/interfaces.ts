@@ -13,8 +13,8 @@ export interface QueryFeedFilters {
   activity?: FiltersActivity | "false"
   keyword?: string | "false"
   ticker?: string | "false"
-  limitWeb2?: number | "false"
-  limitWeb3?: number | "false"
+  limitWeb2?: number | string | "false"
+  limitWeb3?: number | string | "false"
 }
 
 export interface FeedFilters {
@@ -25,8 +25,8 @@ export interface FeedFilters {
   activity?: FiltersActivity | null
   keyword?: string | null
   ticker?: string | null
-  limitWeb2?: number
-  limitWeb3?: number
+  limitWeb2?: number | string
+  limitWeb3?: number | string
 }
 
 export interface FeedFiltersStep {

@@ -3,8 +3,8 @@ import {
   UnknownPostOrEvent, NostrEvent,
   StandardizedEvent, IgnoreWhitelistFor
 } from "../../types/interfaces";
-import { identifyPostOrEvent, standartizePostOrEvent } from "../spasm/identifyEvent";
-import { isObjectWithValues } from "../spasm/utils";
+import { identifyPostOrEvent, standardizePostOrEvent } from "../spasm/identifyEvent";
+import { isObjectWithValues, containsHtmlTags } from "../spasm/utils";
 const ethers = require("ethers");
 const nostrTools = require('nostr-tools');
 const DOMPurify = require('isomorphic-dompurify');
@@ -64,10 +64,10 @@ interface unknownEnvelope {
 export const submitAction = async (
   unknownEnvelope: unknownEnvelope,
   ignoreWhitelistFor = new IgnoreWhitelistFor()
-) => {
+): Promise<string> => {
   console.log("unknownEnvelope:", unknownEnvelope)
-  if (!('unknownEvent' in unknownEnvelope)) return "No unknownEvent found to submit"
-  if (!isObjectWithValues(unknownEnvelope.unknownEvent)) return "Unknown event is empty"
+  if (!('unknownEvent' in unknownEnvelope)) return "ERROR: No unknownEvent found to submit"
+  if (!isObjectWithValues(unknownEnvelope.unknownEvent)) return "ERROR: Unknown event is empty"
 
   try {
 
@@ -75,28 +75,61 @@ export const submitAction = async (
     const unknownPostOrEvent = JSON.parse(JSON.stringify(unknownEnvelope.unknownEvent));
     const info = identifyPostOrEvent(unknownPostOrEvent)
 
-    if (!isObjectWithValues(info)) return "Cannot identify an event or post"
+    if (!isObjectWithValues(info)) return "ERROR: Cannot identify an event or post"
 
-    if (!info.webType) return "Cannot identify an event or post webType"
+    if (!info.webType) return "ERROR: Cannot identify an event or post webType"
 
-    if (!info.eventInfo) return "Cannot identify eventInfo"
+    if (!info.eventInfo) return "ERROR: Cannot identify eventInfo"
 
-    if (!info.eventInfo.type) return "Cannot identify an event type"
+    if (!info.eventInfo.type) return "ERROR: Cannot identify an event type"
 
-    const standartizedEvent: StandardizedEvent | false = standartizePostOrEvent(unknownPostOrEvent, info)
+    const standardizedEvent: StandardizedEvent | false = standardizePostOrEvent(unknownPostOrEvent, info)
 
-    if (!standartizedEvent) return "Cannot standartize event"
+    if (!standardizedEvent) return "ERROR: Cannot standardize event"
 
     // Since signedString is also sanitized, it wouldn't be possible
     // to check the signature and submit a dirty event.
-    const signedString = DOMPurify.sanitize(standartizedEvent.signedString)
-    const signature = DOMPurify.sanitize(standartizedEvent.signature)
-    const signer = DOMPurify.sanitize(standartizedEvent.signer)
-    const target = DOMPurify.sanitize(standartizedEvent.target)
-    const action = DOMPurify.sanitize(standartizedEvent.action)
-    const title = DOMPurify.sanitize(standartizedEvent.title)
-    const text = DOMPurify.sanitize(standartizedEvent.text)
-    const signedDate = DOMPurify.sanitize(standartizedEvent.signedDate)
+    const signedString = DOMPurify.sanitize(standardizedEvent.signedString)
+    // console.log("signedString after DOMPurify:", signedString)
+
+    if (signedString !== standardizedEvent.signedString) {
+      return "ERROR: Something went wrong. Make sure your post doesn't contain HTML tags. You may consider using markdown if this instance supports markdown."
+    }
+
+    const signature = DOMPurify.sanitize(standardizedEvent.signature)
+    const signer = DOMPurify.sanitize(standardizedEvent.signer)
+    const target = DOMPurify.sanitize(standardizedEvent.target)
+    const action = DOMPurify.sanitize(standardizedEvent.action)
+    const title = DOMPurify.sanitize(standardizedEvent.title)
+    const text = DOMPurify.sanitize(standardizedEvent.text)
+    const signedDate = DOMPurify.sanitize(standardizedEvent.signedDate)
+    // const signedString = standardizedEvent.signedString
+    // const signature = standardizedEvent.signature
+    // const signer = standardizedEvent.signer
+    // const target = standardizedEvent.target
+    // const action = standardizedEvent.action
+    // const title = standardizedEvent.title
+    // const text = standardizedEvent.text
+    // const signedDate = standardizedEvent.signedDate
+
+    // Apparently, using DOMPurify is not enough because
+    // Tor users can bypass tags sanitization with nos2x-fox
+    // Nostr extension. Thus, it's better to separately check
+    // whether any of event values have any HTML tags.
+    // The only downside is that developers won't be able to
+    // share code snippets with HTML tags.
+    // Note: deletion of HTML tags doesn't affect markdown.
+    if (
+      containsHtmlTags(signer) ||
+      containsHtmlTags(target) ||
+      containsHtmlTags(action) ||
+      containsHtmlTags(title) ||
+      containsHtmlTags(text) ||
+      containsHtmlTags(signedDate)
+    ) {
+      return "ERROR: HTML tags are not allowed. You may consider using markdown instead if this instance supports markdown."
+    }
+
 
     // Environment variables
     if (!enableNewWeb3ActionsAll) {
@@ -272,15 +305,11 @@ export const submitAction = async (
     console.log("--------------------------------------------")
     return "Sorry, but you've already submitted the same action"
   } catch (err) {
-    console.error('submitReaction failed', unknownEnvelope, err);
+    console.error('submitAction failed', unknownEnvelope, err);
   }
 }
 
 const verifyEthereumSignature = (signedString: string, signature: string, signer: string) => {
-  console.log("verifyEthereumSignature called")
-  console.log('signedString:', signedString)
-  console.log('signature:', signature)
-  console.log('signer:', signer)
 
   if (signature && typeof (signature) === 'string') {
     console.log('signature is type of string, next')
@@ -289,27 +318,29 @@ const verifyEthereumSignature = (signedString: string, signature: string, signer
     // const recoveredAddress = ethers.utils.verifyMessage(signedString, signature).toLowerCase()
     // ethers v6
     const recoveredAddress = ethers.verifyMessage(signedString, signature).toLowerCase()
-    console.log('verifySignature:', recoveredAddress === signer)
+    console.log('verifyEthereumSignature:', recoveredAddress === signer)
     return recoveredAddress === signer
   }
-  console.log('signature is null or not a string')
+  console.log('Ethereum signature is null or not a string')
   return false
 }
 
 const verifyNostrSignature = (nostrEvent: NostrEvent) => {
-  console.log("verifyNostrSignature called")
 
   if (!nostrTools.validateEvent(nostrEvent)) {
     console.log("validateEvent is false")
     return false
   }
 
+  console.log("validateEvent is true")
+
+  console.log("nostrEvent:", nostrEvent)
   if (nostrTools.verifySignature(nostrEvent)) {
-    console.log("verifySignature is true")
+    console.log("verifyNostrSignature is true")
     return true
   }
 
-  console.log('signature is null or not a string')
+  console.log('Invalid Nostr signature')
   return false
 }
 

@@ -98,15 +98,28 @@ export const fetchPostsFromSpasmSources = async (frequency?: string) => {
       type ApiResponse = Post[]
 
       const response: AxiosResponse<ApiResponse> = await axios.get<ApiResponse>(fetchUrl);
+      console.log("response:", response)
 
-      if (response.data && Array.isArray(response.data)) {
+      if (response.data) {
+        let arrayOfPosts = []
+        // 1. Handle arrays of posts/events
+        if (Array.isArray(response.data)) {
         /**
          * Reverse the order of posts/events in the response data
          * so the newest events are inserted into the database at
          * the end, so they will be shown at the top of the feed.
          */
-        const reverseData = response.data.reverse()
-        await Promise.all(reverseData.map((post) =>
+          arrayOfPosts = arrayOfPosts.concat(
+            response.data.reverse()
+          )
+        // 2. Handle single post/event as an object
+        } else if (
+          !Array.isArray(response.data) &&
+          typeof(response.data) === 'object'
+        ) {
+          arrayOfPosts.push(response.data)
+        }
+        await Promise.all(arrayOfPosts.map((post) =>
           submitAction(
             { unknownEvent: post },
             ignoreWhitelistFor

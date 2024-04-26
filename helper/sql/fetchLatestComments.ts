@@ -1,4 +1,5 @@
 import { pool } from "../../db";
+import { FeedFilters } from "../../types/interfaces";
 
 // Override console.log for production
 if (process.env.NODE_ENV !== "dev") {
@@ -7,7 +8,25 @@ if (process.env.NODE_ENV !== "dev") {
   console.warn = () => {}
 }
 
-export const fetchLatestComments = async () => {
+export const fetchLatestComments = async (filters: FeedFilters) => {
+  const searchLimitDefault = 40
+  const searchLimitMax = 250
+
+  let searchLimit = searchLimitDefault 
+
+  if (filters?.limitWeb3) {
+    // Convert filters.limitWeb3 to a number if it's not already
+    searchLimit = Number(filters.limitWeb3)
+
+    // Handle NaN if conversion above has failed, e.g., if
+    // filter limits have letters like '123abc'.
+    if (isNaN(searchLimit)) {
+     searchLimit = searchLimitDefault; // Fallback to default
+    }
+  }
+
+  // Ensure searchLimit does not exceed max value
+  searchLimit = Math.min(searchLimit, searchLimitMax);
 
   try {
     // TODO: delete unnecessary fields from query (target, latest_reaction_added_date?) 
@@ -20,7 +39,7 @@ export const fetchLatestComments = async () => {
     joinId = 'signature'
     date = 'added_time'
     
-    data = await fetchPosts(postsTable, actionsCountTable, joinId, date)
+    data = await fetchPosts(postsTable, actionsCountTable, joinId, date, searchLimit)
 
     return data
   } catch (err) {
@@ -28,7 +47,7 @@ export const fetchLatestComments = async () => {
   }
 }
 
-const fetchPosts = async (postsTable, actionsCountTable, joinId, date) => {
+const fetchPosts = async (postsTable, actionsCountTable, joinId, date, searchLimit) => {
   try {
     // It's important to exclude ${actionsCountTable}.target column from SELECT
     // because otherwise it will overwrite ${postsTable}.target column
@@ -48,8 +67,8 @@ const fetchPosts = async (postsTable, actionsCountTable, joinId, date) => {
       ON ${postsTable}.${joinId} = ${actionsCountTable}.target
       WHERE action='reply'
       ORDER BY ${date} DESC
-      LIMIT 20`
-    , [] );
+      LIMIT $1`
+    , [searchLimit] );
     // console.log('posts.rows[0] at fetchPosts in fetchLatestComments.js:', posts.rows[0])
     return posts.rows
   } catch (err) {

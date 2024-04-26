@@ -1,4 +1,5 @@
 const { bech32 } = require('bech32');
+const { convert: convertHtmlToText } = require('html-to-text');
 
 export const isObjectWithValues = (val: any): boolean => {
   if (!val) return false
@@ -30,5 +31,24 @@ export const convertHexToBech32 = (hexKey, prefix?) => {
   } catch (error) {
     console.error(error)
     return ''
+  }
+}
+
+// Leverage html-to-text NPM package to check whether
+// a string has any valid HTML tags.
+export const containsHtmlTags = (
+  value?: string | number | boolean
+): boolean => {
+  if (!value || typeof(value) !== "string") return false
+
+  try {
+    const text = convertHtmlToText(value, { wordwrap: false });
+    /**
+     *  We have to replace \n with ' ' in original value because
+     *  that's what html-to-text NPM package does with \n.
+     */
+    return text !== value.replace(/\n/g, ' ');
+  } catch (error) {
+    return false;
   }
 }

@@ -890,7 +890,7 @@ export const identifyEventInsidePost = (
   if (isNostrEvent(signedObject)) return "NostrEvent"
 }
 
-export const standartizePostOrEvent = (
+export const standardizePostOrEvent = (
   unknownPostOrEvent: UnknownPostOrEvent,
   info?: KnownPostOrEventInfo
 ): StandardizedEvent | false => {
@@ -905,7 +905,7 @@ export const standartizePostOrEvent = (
 
   if (!info || !info.webType) return false
 
-  let standartizedEvent: StandardizedEvent = {} as StandardizedEvent;
+  let standardizedEvent: StandardizedEvent = {} as StandardizedEvent;
 
   // DMP event submitted via UI
   if (
@@ -913,7 +913,7 @@ export const standartizePostOrEvent = (
     info.eventInfo.type === "DmpEventSignedClosed" &&
     info.eventIsSealed === false
   ) {
-    standartizedEvent = standartizeDmpEventSignedClosed(
+    standardizedEvent = standardizeDmpEventSignedClosed(
       unknownPostOrEvent as DmpEventSignedClosed
     )
   }
@@ -924,7 +924,7 @@ export const standartizePostOrEvent = (
     info.eventInfo.type === "NostrSpasmEventSignedOpened" &&
     info.eventIsSealed === false
   ) {
-    standartizedEvent = standartizeNostrSpasmEventSignedOpened(
+    standardizedEvent = standardizeNostrSpasmEventSignedOpened(
       unknownPostOrEvent as NostrSpasmEventSignedOpened
     )
   }
@@ -935,7 +935,7 @@ export const standartizePostOrEvent = (
     info.eventInfo.type === "DmpEventSignedClosed" &&
     info.eventIsSealed === true
   ) {
-    standartizedEvent = standartizePostWithDmpEventSignedClosed(
+    standardizedEvent = standardizePostWithDmpEventSignedClosed(
       unknownPostOrEvent as Post
     )
   }
@@ -946,16 +946,16 @@ export const standartizePostOrEvent = (
     info.eventInfo.type === "NostrSpasmEventSignedOpened" &&
     info.eventIsSealed === true
   ) {
-    standartizedEvent = standartizePostWithNostrSpasmEventSignedOpened(
+    standardizedEvent = standardizePostWithNostrSpasmEventSignedOpened(
       unknownPostOrEvent as Post
     )
   }
 
-  return standartizedEvent
+  return standardizedEvent
 }
 
 // standardizeDmpEventSignedClosed
-export const standartizeDmpEventSignedClosed = (
+export const standardizeDmpEventSignedClosed = (
   event: DmpEventSignedClosed,
 ): StandardizedEvent | null => {
 
@@ -986,7 +986,7 @@ export const standartizeDmpEventSignedClosed = (
 }
 
 // standardizeNostrSpasmEventSignedOpened
-export const standartizeNostrSpasmEventSignedOpened = (
+export const standardizeNostrSpasmEventSignedOpened = (
   event: NostrSpasmEventSignedOpened,
 ): StandardizedEvent | null => {
 
@@ -1042,8 +1042,8 @@ export const standartizeNostrSpasmEventSignedOpened = (
   }
 }
 
-// standartizePostWithDmpEventSignedClosed
-export const standartizePostWithDmpEventSignedClosed = (
+// standardizePostWithDmpEventSignedClosed
+export const standardizePostWithDmpEventSignedClosed = (
   post: Post,
 ): StandardizedEvent | null => {
 
@@ -1079,7 +1079,7 @@ export const standartizePostWithDmpEventSignedClosed = (
 }
 
 // standardizePostWithNostrSpasmEventSignedOpened
-export const standartizePostWithNostrSpasmEventSignedOpened = (
+export const standardizePostWithNostrSpasmEventSignedOpened = (
   post: Post,
 ): StandardizedEvent | null => {
 
@@ -1095,5 +1095,5 @@ export const standartizePostWithNostrSpasmEventSignedOpened = (
   // Extract the event
   const event = extractSealedEvent(post)
 
-  return standartizeNostrSpasmEventSignedOpened(event as NostrSpasmEventSignedOpened)
+  return standardizeNostrSpasmEventSignedOpened(event as NostrSpasmEventSignedOpened)
 }
