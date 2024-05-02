@@ -2,6 +2,10 @@
 import { pool } from "../../db";
 import { FeedFilters, FiltersWebType, PostAction, Post } from "../../types/interfaces";
 
+const env = process?.env
+const feedFiltersActivityHot: number = Number(env?.FEED_FILTERS_ACTIVITY_HOT) || 5;
+const feedFiltersActivityRising: number = Number(env?.FEED_FILTERS_ACTIVITY_RISING) || 3;
+
 // Override console.log for production
 if (process.env.NODE_ENV !== "dev") {
   console.log = () => {}
@@ -152,10 +156,10 @@ const fetchPosts = async (webType: FiltersWebType, filters: FeedFilters) => {
 
     switch (filters.activity) {
       case 'hot':
-        filtersActivityCount = 5
+        filtersActivityCount = feedFiltersActivityHot || 5
         break
       case 'rising':
-        filtersActivityCount = 3
+        filtersActivityCount = feedFiltersActivityRising || 3
         break
       default:
         filtersActivityCount = 0
