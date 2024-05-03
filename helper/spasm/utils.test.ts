@@ -1,6 +1,6 @@
 import { containsHtmlTags } from './utils';
 
-// isObjectWithValues()
+// containsHtmlTags()
 describe("isObjectWithValues() function tests", () => {
   test("should return false if string has no HTML tags", () => {
     const input = "hello world";
@@ -28,6 +28,22 @@ describe("isObjectWithValues() function tests", () => {
 
   test("should return false if string has markdown and \n", () => {
     const input = `# Hello world\nLine one\nline two\nline three\nwith a [link](https://example.com)\n![image](https://example.com/image.png)`;
+    expect(containsHtmlTags(input)).toBe(false);
+  });
+
+  test("should return false if string has less or greater than", () => {
+    expect(containsHtmlTags("1 < 3")).toBe(false);
+    expect(containsHtmlTags("8 > 5")).toBe(false);
+    expect(containsHtmlTags("<3 love")).toBe(false);
+    expect(containsHtmlTags("1 &lt; 3")).toBe(false);
+    expect(containsHtmlTags("8 &gt; 5")).toBe(false);
+  });
+
+  test("should return false if multi line string has no HTML tags", () => {
+    const input = `Hello
+World and
+next line
+with a **bold** [link](https://example.com)`;
     expect(containsHtmlTags(input)).toBe(false);
   });
 

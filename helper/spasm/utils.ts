@@ -42,12 +42,18 @@ export const containsHtmlTags = (
   if (!value || typeof(value) !== "string") return false
 
   try {
-    const text = convertHtmlToText(value, { wordwrap: false });
+    const convertedText = convertHtmlToText(value, { wordwrap: false, preserveNewlines: true });
     /**
      *  We have to replace \n with ' ' in original value because
      *  that's what html-to-text NPM package does with \n.
+     *  Also &lt; and &gt; to < and >
      */
-    return text !== value.replace(/\n/g, ' ');
+    let originalValue = value
+    // Currently disabled, using preserveNewlines: true instead.
+    // originalValue = originalValue.replace(/\n/g, ' ')
+    originalValue = originalValue.replace(/&lt;/g, '<')
+    originalValue = originalValue.replace(/&gt;/g, '>')
+    return convertedText !== originalValue
   } catch (error) {
     return false;
   }
