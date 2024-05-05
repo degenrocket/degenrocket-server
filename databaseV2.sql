@@ -16,21 +16,22 @@ BEGIN
     ) THEN
         -- JSONB stores JSON objects, arrays, nested arrays
         CREATE TABLE spasm_events (
-            db_key SERIAL PRIMARY KEY,
-            version VARCHAR(255),
-            id TEXT,
-            timestamp BIGINT,
-            db_timestamp BIGINT,
-            links JSONB,
-            keywords TEXT[],
-            tags JSONB,
-            media JSONB,
-            references JSONB,
-            original_event_object JSONB,
-            original_event_string TEXT,
-            stats JSONB,
-            signature TEXT
-            meta JSONB,
+            event JSONB
+            --  db_key SERIAL PRIMARY KEY,
+            --  version VARCHAR(255),
+            --  id TEXT,
+            --  timestamp BIGINT,
+            --  db_timestamp BIGINT,
+            --  links JSONB,
+            --  keywords TEXT[],
+            --  tags JSONB,
+            --  media JSONB,
+            --  references JSONB,
+            --  original_event_object JSONB,
+            --  original_event_string TEXT,
+            --  stats JSONB,
+            --  signature TEXT
+            --  meta JSONB,
         );
     END IF;
 END $$;
