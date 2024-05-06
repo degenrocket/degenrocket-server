@@ -308,7 +308,7 @@ export const isWeb3Post = (
 export const identifyEvent = (
   unknownPostOrEvent: UnknownPostOrEvent
 ): EventInfo => {
-  console.log("identifyEvent called")
+  // console.log("identifyEvent called")
 
   const eventInfo: EventInfo = {
     type: "unknown",

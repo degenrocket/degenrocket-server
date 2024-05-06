@@ -93,6 +93,7 @@ export const submitAction = async (
     // console.log("signedString after DOMPurify:", signedString)
 
     if (signedString !== standardizedEvent.signedString) {
+      console.log("ERROR: Something was sanitized by DOMPurify")
       return "ERROR: Something went wrong. Make sure your post doesn't contain HTML tags. You may consider using markdown if this instance supports markdown."
     }
 
@@ -127,6 +128,7 @@ export const submitAction = async (
       containsHtmlTags(text) ||
       containsHtmlTags(signedDate)
     ) {
+      console.log("ERROR: HTML tags were detected")
       return "ERROR: HTML tags are not allowed. You may consider using markdown instead if this instance supports markdown."
     }
 

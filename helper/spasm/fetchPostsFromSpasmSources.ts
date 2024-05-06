@@ -98,7 +98,7 @@ export const fetchPostsFromSpasmSources = async (frequency?: string) => {
       type ApiResponse = Post[]
 
       const response: AxiosResponse<ApiResponse> = await axios.get<ApiResponse>(fetchUrl);
-      console.log("response:", response)
+      // console.log("response:", response)
 
       if (response.data) {
         let arrayOfPosts = []
