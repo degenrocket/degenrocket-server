@@ -51,5 +51,21 @@ CREATE TABLE public.actions_count (
 );
 
 CREATE TABLE spasm_events (
-    event JSONB
+    spasm_event JSONB
+);
+
+CREATE TABLE users (
+    user JSONB
+);
+
+CREATE TABLE rss_sources (
+    rss_source JSONB
+);
+
+CREATE TABLE spasm_sources (
+    spasm_source JSONB
+);
+
+CREATE TABLE extra_items (
+    extra_item JSONB
 );

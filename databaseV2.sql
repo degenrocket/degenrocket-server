@@ -16,7 +16,7 @@ BEGIN
     ) THEN
         -- JSONB stores JSON objects, arrays, nested arrays
         CREATE TABLE spasm_events (
-            event JSONB
+            spasm_event JSONB
             --  db_key SERIAL PRIMARY KEY,
             --  version VARCHAR(255),
             --  id TEXT,
@@ -32,6 +32,38 @@ BEGIN
             --  stats JSONB,
             --  signature TEXT
             --  meta JSONB,
+        );
+    END IF;
+    IF NOT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'users'
+    ) THEN
+        CREATE TABLE users (
+            user JSONB
+        );
+    END IF;
+    IF NOT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'rss_sources'
+    ) THEN
+        CREATE TABLE rss_sources (
+            rss_source JSONB
+        );
+    END IF;
+    IF NOT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'spasm_sources'
+    ) THEN
+        CREATE TABLE spasm_sources (
+            spasm_source JSONB
+        );
+    END IF;
+    IF NOT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'extra_items'
+    ) THEN
+        CREATE TABLE extra_items (
+            extra_item JSONB
         );
     END IF;
 END $$;
