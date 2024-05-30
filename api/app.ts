@@ -13,6 +13,7 @@ import { fetchFullIdsFromShortId } from "../helper/sql/fetchFullIdsFromShortId";
 import { submitAction } from "../helper/sql/submitAction";
 // import { fetchPostsFromRssSources } from "../helper/rss/fetchPostsFromRssSources";
 import { QueryFeedFilters, FeedFilters } from "../types/interfaces";
+import { isObjectWithValues } from "../helper/spasm/utils";
 
 dotenv.config();
 
@@ -49,6 +50,10 @@ app.get("/api/posts", async(req: Request, res: Response) => {
     limitWeb2: q.limitWeb2 && q.limitWeb2 !== 'false' ? q.limitWeb2 : null,
     limitWeb3: q.limitWeb3 && q.limitWeb3 !== 'false' ? q.limitWeb3 : null
   }
+
+  // Show a few web3 posts if no query is passed
+  if (!isObjectWithValues(q)) { filters.limitWeb3 = 25 }
+
   try {
       const posts = await fetchAllPosts(filters)
       setTimeout(() => { res.json(posts) }, 200)
