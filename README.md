@@ -17,7 +17,7 @@ By default, user `postgres` doesn't have a password on Ubuntu, so the backend wi
 sudo su - postgres
 psql
 CREATE USER dbuser WITH PASSWORD 'dbuser';
-CREATE DATABASE news_database WITH OWNER = dbuser;
+CREATE DATABASE spasm_database WITH OWNER = dbuser;
 exit
 exit
 ```
@@ -37,11 +37,11 @@ POSTGRES_USER=dbuser
 
 To create all tables in a new database, execute the code from `database.sql`.
 
-Note: skip line `CREATE DATABASE news_database;` because we've already created a database in the step above.
+Note: skip line `CREATE DATABASE spasm_database;` because we've already created a database in the step above.
 
 ```
 sudo su - postgres
-psql -h localhost -d news_database -U dbuser -p 5432
+psql -h localhost -d spasm_database -U dbuser -p 5432
 CREATE TABLE IF NOT EXISTS posts(
 id SERIAL NOT NULL,
 ...

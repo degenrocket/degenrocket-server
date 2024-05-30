@@ -4,8 +4,8 @@ import {
   databaseSize,
   logNumberOfEntriesForEachTable,
   getTotalEntriesInDb
-} from "../../helper/sql/dbUtils";
-import { pool } from "../../db";
+} from "../../../../helper/sql/dbUtils";
+import { pool } from "../../../../db";
 
 const migrateToV2 = async () => {
   try {
@@ -23,6 +23,14 @@ const migrateToV2 = async () => {
     const step02 = await verifyDbTables()
 
     console.log("step02:", step02)
+
+    if (step02) {
+      console.log("All tables have correct structures.")
+    } else {
+      console.log("Some tables have incorrect structure.")
+      console.log("Aborting...")
+      return
+    }
 
   } catch (err) {
     console.error('migrateToV2 failed', err);

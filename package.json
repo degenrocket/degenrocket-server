@@ -16,9 +16,10 @@
     "stage": "npm run build && npm run start-stage",
     "start-prod": "pm2 start ecosystem-prod.config.js",
     "start-stage": "pm2 start ecosystem-stage.config.js",
-    "migrate": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node migrations/v2/00_migrateToV2.ts",
-    "migrate-01": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node migrations/v2/01_createDbTables.ts",
-    "migrate-02": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node migrations/v2/02_verifyDbTables.ts"
+    "initialize-db": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/setup/initialize-db.ts",
+    "migrate": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/migrations/v2/00_migrateToV2.ts",
+    "migrate-01": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/migrations/v2/01_createDbTables.ts",
+    "migrate-02": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/migrations/v2/02_verifyDbTables.ts"
   },
   "author": "",
   "private": "true",

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { fetchPostById } from "../../helper/sql/fetchPostById";
-import { pool } from "../../db";
+import { fetchPostById } from "../../../../helper/sql/fetchPostById";
+import { pool } from "../../../../db";
 
 console.log("starting migration to v2")
 console.log("starting creating new database tables")
