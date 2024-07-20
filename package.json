@@ -19,7 +19,8 @@
     "initialize-db": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/setup/initialize-db.ts",
     "migrate": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/migrations/v2/00_migrateToV2.ts",
     "migrate-01": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/migrations/v2/01_createDbTables.ts",
-    "migrate-02": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/migrations/v2/02_verifyDbTables.ts"
+    "migrate-02": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/migrations/v2/02_verifyDbTables.ts",
+    "migrate-03": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/migrations/v2/03_migrateData.ts"
   },
   "author": "",
   "private": "true",
@@ -37,7 +38,7 @@
     "nostr-tools": "^1.17.0",
     "pg": "^8.11.3",
     "rss-parser": "^3.13.0",
-    "spasm.js": "^1.0.2"
+    "spasm.js": "^2.0.0-alpha"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
