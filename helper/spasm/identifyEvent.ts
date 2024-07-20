@@ -1,5 +1,6 @@
 import { EventBaseProtocol, EventPrivateKeyType, UnknownPostOrEvent, UnknownEvent, DmpEvent, DmpEventSignedClosed, NostrEvent, NostrSpasmEvent, NostrSpasmEventSignedOpened, Post, NostrSpasmTag, AnyTag, StandardizedEvent } from "../../types/interfaces";
-import { isObjectWithValues, convertHexToBech32 } from "./utils";
+import { isObjectWithValues } from "../utils/utils";
+import { convertHexToBech32 } from "../utils/nostrUtils";
 
 // Override console.log for production
 if (process.env.NODE_ENV !== "dev") {

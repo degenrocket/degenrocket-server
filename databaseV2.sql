@@ -3,7 +3,11 @@
  * directly, so we need to use a conditional check.
  */
 
+-- It's important to create two databases:
+-- main database is used to store events and other data,
+-- test database is used to run tests (npm run test).
 --  CREATE DATABASE spasm_database;
+--  CREATE DATABASE spasm_database_test;
 
 DO $$
 BEGIN
@@ -62,6 +66,8 @@ BEGIN
             PRIMARY KEY (target)
         );
     END IF;
+
+    -- -- -- --
     -- V2
     IF NOT EXISTS (
         SELECT FROM information_schema.tables 

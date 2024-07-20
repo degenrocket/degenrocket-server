@@ -3,9 +3,9 @@ import { isNostrEvent } from './identifyEvent';
 import { isNostrSpasmEvent } from './identifyEvent';
 import { isNostrEventSignedOpened } from './identifyEvent';
 import { isNostrSpasmEventSignedOpened } from './identifyEvent';
-import { isDmpEventSignedClosed } from './identifyEvent';
+// import { isDmpEventSignedClosed } from './identifyEvent';
 import { hasSignature } from './identifyEvent';
-import { isObjectWithValues } from './utils';
+import { isObjectWithValues } from '../utils/utils';
 import { NostrEvent, NostrEventSignedOpened, NostrSpasmEvent, NostrSpasmEventSignedOpened } from "../../types/interfaces";
 import { DmpEvent, DmpEventSignedClosed, DmpEventSignedOpened } from "../../types/interfaces";
 

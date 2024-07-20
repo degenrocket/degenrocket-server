@@ -4,7 +4,7 @@ import {
   StandardizedEvent, IgnoreWhitelistFor
 } from "../../types/interfaces";
 import { identifyPostOrEvent, standardizePostOrEvent } from "../spasm/identifyEvent";
-import { isObjectWithValues, containsHtmlTags } from "../spasm/utils";
+import { isObjectWithValues, containsHtmlTags } from "../utils/utils";
 const ethers = require("ethers");
 const nostrTools = require('nostr-tools');
 const DOMPurify = require('isomorphic-dompurify');

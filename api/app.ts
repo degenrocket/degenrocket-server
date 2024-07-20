@@ -13,7 +13,7 @@ import { fetchFullIdsFromShortId } from "../helper/sql/fetchFullIdsFromShortId";
 import { submitAction } from "../helper/sql/submitAction";
 // import { fetchPostsFromRssSources } from "../helper/rss/fetchPostsFromRssSources";
 import { QueryFeedFilters, FeedFilters } from "../types/interfaces";
-import { isObjectWithValues } from "../helper/spasm/utils";
+import { isObjectWithValues } from "../helper/utils/utils";
 
 dotenv.config();
 
