@@ -1,3 +1,19 @@
+import { env } from "./../appConfig";
+const {
+  allowNewEventsWithoutSignature,
+  enableNewWeb3ActionsAll, 
+  enableNewWeb3ActionsPost,
+  enableNewWeb3ActionsReact,
+  enableNewWeb3ActionsReply,
+  enableNewWeb3ActionsModerate,
+  enableNewNostrActionsAll,
+  enableNewEthereumActionsAll,
+  enableModeration,
+  moderators,
+  enableWhitelistForActionPost,
+  whitelistedForActionPost
+} = env
+
 export type FiltersActivity = "hot" | "rising" | "all" | null;
 
 // export type FiltersCategory = "defi" | "nft" | "privacy" | "any" | null;
@@ -664,6 +680,7 @@ export interface SpasmEventSource {
   showSource?: boolean
 }
 
+// TODO delete after fully migrating to V2 (submitSpasmEvent)
 export class IgnoreWhitelistFor {
   action: {
     post: boolean
@@ -718,6 +735,157 @@ export interface KnownPostOrEventInfo {
 }
 
 export type PrivateKeyType = "ethereum" | "nostr"
+
+////////////////
+// Configs
+export type CustomFunctionType = (...args: any[]) => any;
+
+export class ConfigForSubmitSpasmEvent {
+  htmlTags: { allowed: boolean }
+  // For example, web2 posts (RSS items) have no signatures
+  eventsWithoutSignature: { allowed: boolean }
+  web3: {
+    signature: {
+      ethereum: { enabled: boolean }
+      nostr: { enabled: boolean }
+    }
+    action: {
+      all: { enabled: boolean }
+      post: { enabled: boolean }
+      react: { enabled: boolean }
+      reply: { enabled: boolean }
+      moderate: { enabled: boolean }
+    }
+  }
+  whitelist: {
+    action: {
+      post: { enabled: boolean, list: string[] }
+      react: { enabled: boolean, list: string[] }
+      reply: { enabled: boolean, list: string[] }
+      moderate: { enabled: boolean, list: string[] }
+    }
+  }
+  moderation: {
+    enabled: boolean,
+    list: string[]
+  }
+  constructor() {
+    this.htmlTags = { allowed: false }
+    this.eventsWithoutSignature = { allowed: allowNewEventsWithoutSignature }
+    this.web3 = {
+      signature: {
+        ethereum: { enabled: enableNewEthereumActionsAll },
+        nostr: { enabled: enableNewNostrActionsAll }
+      },
+      action: {
+        all: { enabled: enableNewWeb3ActionsAll },
+        post: { enabled: enableNewWeb3ActionsPost },
+        react: { enabled: enableNewWeb3ActionsReact },
+        reply: { enabled: enableNewWeb3ActionsReply },
+        moderate: { enabled: enableNewWeb3ActionsModerate },
+      },
+    },
+    this.whitelist = {
+      action: {
+        post: {
+          enabled: enableWhitelistForActionPost,
+          list: whitelistedForActionPost
+        },
+        react: { enabled: false, list: [] },
+        reply: { enabled: false, list: [] },
+        moderate: { enabled: false, list: [] }
+      }
+    },
+    this.moderation = {
+      enabled: enableModeration,
+      list: moderators
+    }
+  }
+}
+
+// export class ConfigForSubmitSpasmEvent {
+//   allowHtmlTags: boolean
+//   enable: {
+//     new: {
+//       web3: {
+//         signatures: {
+//           ethereum: boolean
+//           nostr: boolean
+//         }
+//         actions: {
+//           all: boolean
+//           post: boolean
+//           react: boolean
+//           reply: boolean
+//           moderate: boolean
+//         }
+//       }
+//     }
+//     whitelistFor: {
+//       action: {
+//         post: boolean
+//         react: boolean
+//         reply: boolean
+//         moderate: boolean
+//       }
+//     }
+//   }
+//   ignore: {
+//     whitelistFor: {
+//       action: {
+//         post: boolean
+//         react: boolean
+//         reply: boolean
+//         moderate: boolean
+//       }
+//     }
+//   }
+//   constructor() {
+//     this.enable = {
+//       new: {
+//         web3: {
+//           signatures: {
+//             ethereum: true,
+//             nostr: true
+//           },
+//           actions: {
+//             all: true,
+//             post: true,
+//             react: true,
+//             reply: true,
+//             moderate: true
+//           }
+//         }
+//       },
+//       whitelistFor: {
+//         action: {
+//           post: false,
+//           react: false,
+//           reply: false,
+//           moderate: false
+//         }
+//       }
+//     }
+//     this.ignore = {
+//       whitelistFor: {
+//         action: {
+//           post: false,
+//           react: false,
+//           reply: false,
+//           moderate: false
+//         }
+//       }
+//     }
+//     this.allowHtmlTags = false
+//   }
+// }
+
+type MakeOptional<T> = {
+  [P in keyof T]?: T[P] extends object ? MakeOptional<T[P]> : T[P];
+};
+
+export type CustomConfigForSubmitSpasmEvent =
+  MakeOptional<ConfigForSubmitSpasmEvent>
 
 ////////////////
 // Spasm V2

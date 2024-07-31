@@ -4,11 +4,13 @@ import {
   SpasmEventDatabaseV2,
   SpasmEventIdFormatNameV2,
   SpasmEventV2,
-  UnknownEventV2
+  UnknownEventV2,
+  SpasmEventStatV2
 } from "../../types/interfaces";
 import {
   hasValue,
   isObjectWithValues,
+  removeDuplicatesFromArray,
   toBeString,
   toBeTimestamp
 } from "../utils/utils";
@@ -74,6 +76,7 @@ interface EventFromDb {
   db_key: number | string,
   db_added_timestamp: number | string,
   db_updated_timestamp: number | string,
+  stats: any
 }
 
 export const joinDbInfo = (
@@ -86,7 +89,8 @@ export const joinDbInfo = (
     spasm_event,
     db_key,
     db_added_timestamp,
-    db_updated_timestamp
+    db_updated_timestamp,
+    stats
   } = eventFromDb
 
   const spasmEvent: SpasmEventV2 = spasm_event
@@ -134,6 +138,10 @@ export const joinDbInfo = (
       spasmEvent.db.table = dbTable
     }
   }
+
+  if (stats && Array.isArray(stats) && hasValue(stats)) {
+    spasmEvent.stats = stats
+  }
   return spasmEvent
 }
 
@@ -154,10 +162,6 @@ export const fetchAllSpasmEventsV2ById = async (
   const id = DOMPurify.sanitize(toBeString(dirtyId))
   const dbTable = DOMPurify.sanitize(dirtyDbTable)
 
- /**
-  * -> operator gets a JSON object field as JSON (or JSONB),
-  * ->> operator gets a JSON object field as text
-  */
   try {
     const res = await pool.query(`
       SELECT *
@@ -175,6 +179,10 @@ export const fetchAllSpasmEventsV2ById = async (
       ]
     );
 
+   /**
+    * -> operator gets a JSON object field as JSON (or JSONB),
+    * ->> operator gets a JSON object field as text
+    */
     // Another approach using jsonb_array_elements:
     // const res = await pool.query(`
     //   SELECT *
@@ -215,10 +223,11 @@ export const fetchAllSpasmEventsV2ByIds = async (
   dirtyIds: (string | number)[],
   pool = poolDefault,
   dirtyDbTable = "spasm_events"
-): Promise<SpasmEventV2[] | null> => {
+): Promise<(SpasmEventV2 | null)[] | null> => {
   if (!dirtyIds || !Array.isArray(dirtyIds)) return null
+  // spasm.sanitizeEvent() can also sanitize an array
   spasm.sanitizeEvent(dirtyIds)
-  const ids = dirtyIds
+  const ids = removeDuplicatesFromArray(dirtyIds)
   const dbTable = DOMPurify.sanitize(dirtyDbTable)
 
   const idsQueryObjects = ids.map(id => {
@@ -287,8 +296,74 @@ export const fetchSpasmEventV2ById = async (
   }
 }
 
-// TODO
-// fetchSpasmEventsV2ByParentId()
+// TODO ByParentIds (copy from ByIds)
+export const fetchAllSpasmEventsV2ByParentId = async (
+  dirtyParentId: string,
+  pool = poolDefault,
+  dirtyDbTable = "spasm_events"
+): Promise<SpasmEventV2[] | null> => {
+  if (
+    !dirtyParentId ||
+    (
+      typeof(dirtyParentId) !== "string" &&
+      typeof(dirtyParentId) !== "number"
+    )
+  ) {
+    return null
+  }
+
+  const parentId = DOMPurify.sanitize(toBeString(dirtyParentId))
+  const dbTable = DOMPurify.sanitize(dirtyDbTable)
+
+  try {
+    // Works
+    const res = await pool.query(`
+      SELECT *
+      FROM ${dbTable}
+      WHERE spasm_event @> $1::jsonb
+      `,
+      [
+        // $1 parentId
+        {
+          "parent": {
+            "ids": [
+              {
+                "value": parentId
+              }
+            ]
+          }
+        }
+      ]
+    )
+
+    const spasmEvents: SpasmEventV2[] = []
+
+    if (res?.rows && Array.isArray(res.rows)) {
+      res.rows.forEach((row: any) => {
+        if (
+          row && typeof(row) === "object" &&
+          'spasm_event' in row &&
+          row.spasm_event &&
+          typeof(row.spasm_event) === "object"
+        ) {
+          const spasmEvent: SpasmEventV2 = joinDbInfo(
+            row, dbTable
+          )
+          spasmEvent.type = "SpasmEventV2"
+          spasmEvents.push(spasmEvent)
+        }
+      })
+    }
+    return spasmEvents
+  } catch (err) {
+    console.error(err);
+    return null
+  }
+}
+
+export const fetchAllSpasmEventsV2ByTarget =
+  fetchAllSpasmEventsV2ByParentId
+
 export const fetchAllSpasmEventsV2BySigner = async (
   dirtySigner: string,
   pool = poolDefault,
@@ -349,9 +424,11 @@ export const fetchAllSpasmEventsV2BySigner = async (
   }
 }
 
-export const fetchAllSpasmEventsV2ByPubkey = fetchAllSpasmEventsV2BySigner
+export const fetchAllSpasmEventsV2ByPubkey =
+  fetchAllSpasmEventsV2BySigner
 
-export const fetchAllSpasmEventsV2ByAuthorAddress = fetchAllSpasmEventsV2BySigner
+export const fetchAllSpasmEventsV2ByAuthorAddress =
+  fetchAllSpasmEventsV2BySigner
 
 export const cleanDbTable = async (
   dirtyDbTable: string,
@@ -390,13 +467,13 @@ export const fetchAllEventsWithSameIdFromDbV2 = async (
   dirtyDbTable = "spasm_events"
 ): Promise<SpasmEventV2[] | null> => {
   try {
-    const dbTable = DOMPurify.sanitize(dirtyDbTable)
-    const idFormatName = DOMPurify.sanitize(dirtyIdFormatName)
+    const dbTable = DOMPurify.sanitize(toBeString(dirtyDbTable))
+    const idFormatName =
+      DOMPurify.sanitize(toBeString(dirtyIdFormatName))
     const idFormatVersion =
-      DOMPurify.sanitize(dirtyIdFormatVersion)
-
-    const spasmEventV2 = spasm.toBeSpasmEventV2(unknownEvent)
-
+      DOMPurify.sanitize(toBeString(dirtyIdFormatVersion))
+    const spasmEventV2: SpasmEventV2 =
+      spasm.toBeSpasmEventV2(unknownEvent)
     if (!spasmEventV2) return []
 
     const id = spasm.extractIdByFormat(
@@ -484,10 +561,9 @@ export const isReactionDuplicate = async (
   dirtyDbTable = "spasm_events"
 ): Promise<boolean> => {
   try {
-    const dbTable = DOMPurify.sanitize(dirtyDbTable)
-
-    const spasmEventV2 = spasm.toBeSpasmEventV2(unknownEvent)
-
+    const dbTable = DOMPurify.sanitize(toBeString(dirtyDbTable))
+    const spasmEventV2: SpasmEventV2 =
+      spasm.toBeSpasmEventV2(unknownEvent)
     if (!spasmEventV2) return false
 
     const verifiedSigners: (string | number)[] =
@@ -654,46 +730,133 @@ const isReactionDuplicateForThisSignerAndThisParentId = async (
   return false
 }
 
-export const deleteSpasmEventV2FromDbById = async (
-  dirtyId: string | number,
+/**
+ * deleteSpasmEventsV2FromDbByIds() returns true only if two
+ * conditions are met:
+ * - at least one event was deleted,
+ * - there are no events with specified IDs in db
+ */
+export const deleteSpasmEventsV2FromDbByIds = async (
+  dirtyIds: (string | number)[],
   pool = poolDefault,
   dirtyDbTable = "spasm_events"
 ): Promise<boolean | null> => {
-  if (
-    !dirtyId ||
-    (
-      typeof(dirtyId) !== "string" &&
-      typeof(dirtyId) !== "number"
-    )
-  ) return null
+  if (!dirtyIds || !Array.isArray(dirtyIds)) return null
 
-  const id = DOMPurify.sanitize(toBeString(dirtyId))
+  // sanitizeEvent() can also sanitize an array
+  spasm.sanitizeEvent(dirtyIds)
+  const ids = removeDuplicatesFromArray(dirtyIds)
   const dbTable = DOMPurify.sanitize(dirtyDbTable)
+
+  const idsQueryObjects = ids.map(id => (
+    {
+      "ids": [
+        {
+          "value": id
+        }
+      ]
+    }
+  ))
 
   try {
     const res = await pool.query(`
       DELETE
       FROM ${dbTable}
-      WHERE spasm_event @> $1::jsonb
+      WHERE spasm_event @> ANY($1::jsonb[])
       `,
-      [
-        {
-          "ids": [
-            {
-              "value": id
-            }
-          ]
-        }
-      ]
+      [idsQueryObjects]
     );
 
-    return res.rowCount > 0
+    // return res.rowCount > 0
+
+    if (res.rowCount > 0) {
+      // If some events were deleted, then let's check whether
+      // any events are still present in the db to figure out
+      // whether to return 'true' or 'false'. 
+      if (!hasValue(await fetchAllSpasmEventsV2ByIds(
+        ids, pool, dbTable
+      ))) {
+        // No events were found in db
+        return true
+      } else {
+        // Some events are still in db
+        return false
+      }
+    } else {
+      // Return false if no events were deleted
+      return false
+    }
   } catch (err) {
     console.error(err);
     return null
   }
 }
 
+export const deleteSpasmEventV2FromDbById = async (
+  dirtyId: string | number,
+  pool = poolDefault,
+  dirtyDbTable = "spasm_events"
+): Promise<boolean | null> => {
+  return deleteSpasmEventsV2FromDbByIds(
+    [dirtyId],
+    pool,
+    dirtyDbTable
+  )
+}
+
+// export const deleteSpasmEventV2FromDbById = async (
+//   dirtyId: string | number,
+//   pool = poolDefault,
+//   dirtyDbTable = "spasm_events"
+// ): Promise<boolean | null> => {
+//   if (
+//     !dirtyId ||
+//     (
+//       typeof(dirtyId) !== "string" &&
+//       typeof(dirtyId) !== "number"
+//     )
+//   ) return null
+//
+//   const id = DOMPurify.sanitize(toBeString(dirtyId))
+//   const dbTable = DOMPurify.sanitize(dirtyDbTable)
+//
+//   try {
+//     const res = await pool.query(`
+//       DELETE
+//       FROM ${dbTable}
+//       WHERE spasm_event @> $1::jsonb
+//       `,
+//       [
+//         {
+//           "ids": [
+//             {
+//               "value": id
+//             }
+//           ]
+//         }
+//       ]
+//     );
+//
+//     return res.rowCount > 0
+//   } catch (err) {
+//     console.error(err);
+//     return null
+//   }
+// }
+
+/**
+ * The action can be banned via different moderation events,
+ * e.g. via the 'delete' event. It's important to prevent
+ * banned events from being re-inserted into the database.
+ * For example, post 123 was fetched by instance ABC from
+ * instance XYZ via the SPASM module. The post got deleted
+ * by the moderator of the ABC instance. After a few minutes,
+ * instance ABC is fetching posts from instance XYZ again,
+ * but it should not insert post 123 into the database since
+ * it has been previously deleted by the moderator. Banned
+ * posts should also be rejected in they come from multiple
+ * other instances.
+ */
 export const isEventBanned = async (
   unknownEvent: UnknownEventV2,
   pool = poolDefault,
@@ -701,21 +864,33 @@ export const isEventBanned = async (
 ): Promise<boolean> => {
   try {
     const dbTable = DOMPurify.sanitize(toBeString(dirtyDbTable))
-    const spasmEventV2 = spasm.toBeSpasmEventV2(unknownEvent)
+    const spasmEventV2: SpasmEventV2 =
+      spasm.toBeSpasmEventV2(unknownEvent)
     if (!spasmEventV2) return false
 
-    const spasmId = spasm.getIdByFormat(spasmEventV2, {
-      name: "spasmid", version: "01"
-    })
+    // const spasmId = spasm.getIdByFormat(spasmEventV2, {
+    //   name: "spasmid", version: "01"
+    // })
+    //
+    // if (!spasmId) return false
 
-    if (!spasmId) return false
-
-    if (
-      spasmEventV2.ids && Array.isArray(spasmEventV2.ids)
-    ) {
-      const ids = spasm.getAllIdsFromArrayOfIdObjects(
-        spasmEventV2.ids
-      )
+    // TODO? Allow post if signer is not a moderator anymore?
+    // Get array of signers from each 'delete' moderate event,
+    // check if any of the signers is a valid moderator,
+    // return true if at least one signer is a valid moderator.
+    // E.g., if a moderator became malicious, banned many posts,
+    // but then got removed from the moderators list.
+    // Although, in that situation an admin can manually delete
+    // all actions of that moderator from the database after
+    // the timestamp when the moderator became malicious.
+    // Thus, posts banned by the malicious moderator won't be
+    // banned anymore.
+    // However, checking whether a signer of a moderation event
+    // is a moderator at this instance still makes sense in case
+    // if an instance administrator enabled syncing of moderation
+    // events by accident.
+    const ids = spasm.getAllEventIds(spasmEventV2)
+    if (ids && Array.isArray(ids)) {
       return areIdsBanned(ids, pool, dbTable)
     } else {
       return false
@@ -775,10 +950,15 @@ export const areIdsBanned = async (
   pool = poolDefault,
   dirtyDbTable = "spasm_events"
 ): Promise<boolean | null> => {
-  if (!dirtyIds || !Array.isArray(dirtyIds)) return null
+  if (
+    !dirtyIds ||
+    !Array.isArray(dirtyIds) ||
+    !hasValue(dirtyIds)
+  ) return null
 
+  // sanitizeEvent() can also sanitize an array
   spasm.sanitizeEvent(dirtyIds)
-  const ids = dirtyIds
+  const ids = removeDuplicatesFromArray(dirtyIds)
   const dbTable = DOMPurify.sanitize(dirtyDbTable)
 
   const idsQueryObjects = ids.map(id => (
@@ -809,4 +989,273 @@ export const areIdsBanned = async (
     console.error(err);
     return null
   }
+}
+
+export const incrementSpasmEventActionV2 = async (
+  unknownEvent: UnknownEventV2,
+  pool = poolDefault,
+  dirtyDbTable = "spasm_events"
+): Promise<boolean | null> => {
+  const spasmEventV2: SpasmEventV2 =
+    spasm.toBeSpasmEventV2(unknownEvent)
+  if (!spasmEventV2) return false
+  if (
+    spasmEventV2.action !== "react" &&
+    spasmEventV2.action !== "reply" &&
+    spasmEventV2.action !== "share" &&
+    spasmEventV2.action !== "vote"
+  ) return false
+  if (!spasmEventV2.action || (
+    typeof(spasmEventV2.action) !== "string" &&
+    typeof(spasmEventV2.action) !== "number"
+  )) return false
+  if (!spasmEventV2.content || (
+    typeof(spasmEventV2.content) !== "string" &&
+    typeof(spasmEventV2.content) !== "number"
+  )) return false
+  if (
+    !spasmEventV2.signatures ||
+    !hasValue(spasmEventV2.signatures)
+  ) return false
+
+  const action: string | number = spasmEventV2.action
+  const content: string | number = spasmEventV2.content
+  const latestTimestamp: number = spasmEventV2.timestamp
+  const latestDbTimestamp: number =
+    spasmEventV2.db?.addedTimestamp
+  const dbTable = DOMPurify.sanitize(dirtyDbTable)
+  const parentIds: (string | number)[] =
+    spasm.getAllParentIds(spasmEventV2)
+
+  return incrementSpasmEventStatsV2(
+    parentIds,
+    action, content,
+    latestTimestamp, latestDbTimestamp,
+    pool, dbTable
+  )
+}
+
+/**
+ * We should ideally increment stats with a query, but it's
+ * very complicated, so the easier solution is to simply
+ * fetch the event, extract 'stats', change 'stats' and finally
+ * update the event in the database with new 'stats'.
+ * That should avoid the loss of data during the concurrent
+ * execution of event merges (when a new sibling is added to
+ * the existent event into 'spasm_event' column), but the loss
+ * of data can still occur during the concurrent execution of
+ * multiple incrementations. It should not cause any significant
+ * issues since most instances are designed to handle a low
+ * amount of traffic. However, this might lead to not all
+ * actions being properly counted during massive executions
+ * like database migration.
+ */
+export const incrementSpasmEventStatsV2 = async (
+  dirtyIds: (string | number)[],
+  action: string | number,
+  content: string | number,
+  latestTimestamp: number,
+  latestDbTimestamp: number,
+  pool = poolDefault,
+  dirtyDbTable = "spasm_events"
+): Promise<boolean | null> => {
+  if (!dirtyIds || !Array.isArray(dirtyIds)) return null
+  // spasm.sanitizeEvent() can also sanitize an array
+  spasm.sanitizeEvent(dirtyIds)
+  const ids = removeDuplicatesFromArray(dirtyIds)
+  const dbTable = DOMPurify.sanitize(dirtyDbTable)
+
+  // Get array of spasm events from parent IDs
+  const spasmEvents: SpasmEventV2[] =
+    await fetchAllSpasmEventsV2ByIds(ids, pool, dbTable)
+
+  // Filter out duplicate events based on db_key (event.db.key)
+  const uniqueDbKeys = new Set<number>()
+  const uniqueSpasmEvents: SpasmEventV2[] =
+    spasmEvents.filter(event => {
+    const key = event.db?.key
+    if (key && !uniqueDbKeys.has(key)) {
+      uniqueDbKeys.add(key);
+      return true // Keep the event
+    } else if (!key) {
+      // Remove the event if it has no db key because
+      // we will update stats based on db key
+      return false 
+    }
+    return false // Remove the event
+  })
+
+  // Promise.all and map are used because
+  // await doesn't work with array.forEach
+  const results = await Promise.all(
+    uniqueSpasmEvents.map((spasmEvent) => {
+      return incrementStatsV2ForThisEvent(
+        spasmEvent,
+        action, content,
+        latestTimestamp, latestDbTimestamp,
+        pool, dbTable
+      )
+    })
+  )
+
+  // Return true if all results are true
+  if (results.every(result => result)) {
+    return true
+  } else {
+    return false
+  }
+}
+
+export const incrementStatsV2ForThisEvent = async (
+  unknownEvent: UnknownEventV2,
+  dirtyAction: string | number,
+  dirtyContent: string | number,
+  latestTimestamp: number,
+  latestDbTimestamp: number,
+  pool = poolDefault,
+  dirtyDbTable = "spasm_events"
+): Promise<boolean | null> => {
+  const spasmEventV2: SpasmEventV2 =
+    spasm.toBeSpasmEventV2(unknownEvent)
+  if (!spasmEventV2) return false
+  const action = DOMPurify.sanitize(toBeString(dirtyAction))
+  const content = DOMPurify.sanitize(toBeString(dirtyContent))
+  const dbTable = DOMPurify.sanitize(dirtyDbTable)
+
+  // Create stats if it's null or undefined
+  spasmEventV2.stats ??= [];
+
+  // Index of a target action (stat) in the array of all stats
+  let actionIndex: number | null = null
+  // Find if an action exists in stats
+  spasmEventV2.stats.forEach((stat, index) => {
+    if (stat && 'action' in stat && stat.action === action) {
+      actionIndex = index
+    }
+  })
+
+  // Scenario 1. Action (not 'reply') already exists in stats,
+  // so we need to check whether it has a target content.
+  if (
+    action !== "reply" &&
+    typeof(actionIndex) === "number"
+  ) {
+    // Create contents if it's null or undefined
+    spasmEventV2.stats[actionIndex].contents ??= [];
+
+    // Index of a target content in the array of all contents
+    let contentIndex: number | null = null
+    // Find if a content exists in action,
+    // e.g., if content 'upvote' exists in action 'react'
+    spasmEventV2.stats[actionIndex].contents.forEach(
+      (statContent, index) => {
+      if (
+        statContent && 'value' in statContent &&
+        statContent.value === content
+      ) {
+        contentIndex = index
+      }
+    })
+
+    // Scenario 1.1. Content already exists
+    if (typeof(contentIndex) === "number") {
+      if (
+        typeof(spasmEventV2.stats[actionIndex].contents[contentIndex].total) === "number" &&
+        Number(spasmEventV2.stats[actionIndex].contents[contentIndex].total) > -1
+      ) {
+        let oldTotal = Number(spasmEventV2.stats[actionIndex].contents[contentIndex].total)
+        const newValue = oldTotal ? oldTotal + 1 : 1
+        spasmEventV2.stats[actionIndex].contents[contentIndex].total = newValue
+      }
+    // Scenario 1.2. Content doesn't exist yet
+    } else {
+      const newContent = {
+        value: content,
+        total: 1,
+        latestTimestamp: latestTimestamp,
+        latestDbTimestamp: latestDbTimestamp
+      }
+      spasmEventV2.stats[actionIndex].contents.push(newContent)
+    }
+  }
+
+  // Scenario 2. Action (not 'reply') doesn't exist in stats yet,
+  // so we simply create the whole object with action & contents.
+  if (
+    action !== "reply" &&
+    actionIndex === null
+  ) {
+    const newStat: SpasmEventStatV2 = {
+      action: action,
+      total: 1,
+      latestTimestamp: latestTimestamp,
+      latestDbTimestamp: latestDbTimestamp,
+      contents: [
+        {
+          value: content,
+          total: 1
+        }
+      ]
+    }
+    spasmEventV2.stats.push(newStat)
+  }
+
+  // Scenario 3. Action is 'reply' and it already exists in stats
+  // so we don't have to create 'contents', because we only
+  // need to count the total amount of replies.
+  if (
+    action === "reply" &&
+    typeof(actionIndex) === "number"
+  ) {
+    // Do nothing.
+    // The total for action will be incremented later.
+  }
+
+  // Scenario 4. Action is 'reply' and it doesn't exist in stats
+  if (
+    action === "reply" &&
+    actionIndex === null
+  ) {
+    const newStat: SpasmEventStatV2 = {
+      action: action,
+      total: 1,
+      latestTimestamp: latestTimestamp,
+      latestDbTimestamp: latestDbTimestamp,
+    }
+    spasmEventV2.stats.push(newStat)
+  }
+
+  // Finally, increment the total for action
+  if (typeof(actionIndex) === "number") {
+    const oldTotal =
+      Number(spasmEventV2.stats?.[actionIndex].total)
+    const newTotal = oldTotal ? oldTotal + 1 : 1
+    spasmEventV2.stats[actionIndex].total = newTotal
+    spasmEventV2.stats[actionIndex].latestTimestamp =
+      latestTimestamp
+    spasmEventV2.stats[actionIndex].latestDbTimestamp =
+      latestDbTimestamp
+  }
+
+  try {
+    const res = await pool.query(`
+      UPDATE ${dbTable}
+      SET stats = $2
+      WHERE db_key = $1
+      `,
+      [spasmEventV2.db.key, JSON.stringify(spasmEventV2.stats)]
+    );
+
+    return res.rowCount > 0
+  } catch (err) {
+    console.error(err);
+    return null
+  }
+
+  // Construct the query dynamically based on the action
+  // let query = `
+  //   UPDATE "spasm_events"
+  //   SET (event -> 'stats' -> #>> '{action}') = (event -> 'stats' -> #>> '{action}') + 1
+  //   WHERE event @> $1::jsonb
+  // `;
 }

@@ -13,10 +13,14 @@ import {
   validDmpReactionDownvoteDiffSignerSignedClosed,
   validDmpReactionDownvoteSignedClosed,
   validDmpReactionDownvoteSignedClosedDuplicate,
+  validDmpReactionUpvote,
   validDmpReactionUpvoteDiffParentSignedClosed,
   validDmpReactionUpvoteDiffSignerSignedClosed,
+  validDmpReactionUpvoteDiffSignerSignedClosedConvertedToSpasmEventV2,
   validDmpReactionUpvoteSignedClosed,
+  validDmpReactionUpvoteSignedClosedConvertedToSpasmEventV2,
   validDmpReactionUpvoteSignedClosedDuplicate,
+  invalidDmpReactionUpvoteSignedClosedWrongSignature,
   validDmpReplyDiffParentSignedClosed,
   validDmpReplyDiffSignerSignedClosed,
   validDmpReplySignedClosed,
@@ -28,19 +32,22 @@ import {
 } from './../../db';
 import {
   cleanDbTable,
+  deleteSpasmEventsV2FromDbByIds,
   deleteSpasmEventV2FromDbById,
   fetchAllSpasmEventsV2ByIds,
+  fetchAllSpasmEventsV2ByParentId,
   fetchAllSpasmEventsV2BySigner,
   fetchEventWithSameSpasmIdFromDbV2,
   fetchSpasmEventV2ById,
+  incrementSpasmEventActionV2,
   insertSpasmEventV2,
   isEventBanned,
   isReactionDuplicate
 } from './sqlUtils';
 const { spasm } = require('spasm.js');
 
-// temlate()
-describe("temlate() function tests", () => {
+// template()
+describe("template() function tests", () => {
   test("should return true if passed true", async () => {
     const input = true;
     const output = true;
@@ -48,8 +55,8 @@ describe("temlate() function tests", () => {
   });
 });
 
-describe("insertSpasmEventV2() function tests", () => {
-  test("should insert valid events", async () => {
+describe("multiple chained tests", () => {
+  test("multiple chained tests", async () => {
     // Clean up db table before testing.
     expect(
       await cleanDbTable("spasm_events", poolTest)
@@ -82,11 +89,6 @@ describe("insertSpasmEventV2() function tests", () => {
         )
       ).content
     ).toStrictEqual("upvote")
-
-    // TODO reactions from events without signatures
-    // should not be counted
-    // insert dmp reply without signature
-    // delete dmp reply
 
     // Dmp events
     expect(await isReactionDuplicate(
@@ -208,6 +210,37 @@ describe("insertSpasmEventV2() function tests", () => {
     expect(fetchedEventWeb2ByIdSpasmid.title).toStrictEqual("To the Moon!")
     expect(fetchedEventWeb2ByIdUrl.title).toStrictEqual("To the Moon!")
     expect(fetchedEventWeb2ByIdGuid.title).toStrictEqual("To the Moon!")
+
+    expect(
+      await deleteSpasmEventsV2FromDbByIds(
+        [
+          "https://forum.degenrocket.space/?b=21&t=fog&c=samourai&h=hijack",
+          "https://forum.degenrocket.space/?l=terraforming",
+          "some-random-id with space",
+          12345
+        ],
+        poolTest
+      )
+    ).toStrictEqual(true)
+
+    // Calling the same function should return false because
+    // there will be no events to delete after the initial
+    // deletion above.
+    expect(
+      await deleteSpasmEventsV2FromDbByIds(
+        [
+          "https://forum.degenrocket.space/?b=21&t=fog&c=samourai&h=hijack",
+          "https://forum.degenrocket.space/?l=terraforming",
+          "some-random-id with space",
+          12345
+        ],
+        poolTest
+      )
+    ).toStrictEqual(false)
+
+    expect(
+      await howManyEntriesInTable("spasm_events", poolTest)
+    ).toStrictEqual(1)
 
     // Clean up db table after testing.
     expect(
@@ -546,8 +579,8 @@ describe("isReactionDuplicate() function tests", () => {
   });
 });
 
-// temlate()
-describe("temlate() function tests", () => {
+// template()
+describe("template() function tests", () => {
   test("should return true if passed true", async () => {
     const input = true;
     const output = true;
@@ -673,31 +706,362 @@ describe("fetchAllSpasmEventsV2ByIds() function tests", () => {
   });
 });
 
-// temlate()
-describe("temlate() function tests", () => {
+// fetchAllSpasmEventsV2ByParentId()
+describe("fetchAllSpasmEventsV2ByParentId() tests", () => {
   test("should return true if passed true", async () => {
     const input = true;
     const output = true;
     expect(input).toStrictEqual(output);
 
     // Clean up db table before testing.
-    expect(
-      await cleanDbTable("spasm_events", poolTest)
+    expect(await cleanDbTable("spasm_events", poolTest)
     ).toStrictEqual(true);
 
+    expect(await howManyEntriesInTable("spasm_events", poolTest)
+    ).toStrictEqual(0)
+
+    // tests here
+    expect(await insertSpasmEventV2(
+      validDmpEventSignedClosed, poolTest
+    )).toStrictEqual(true)
+
+    expect((await fetchSpasmEventV2ById(
+      validDmpEventSignedClosed.signature, poolTest
+    )).title).toStrictEqual("genesis")
+
+    expect(await insertSpasmEventV2(
+      validDmpReactionUpvoteSignedClosed, poolTest
+    )).toStrictEqual(true)
+
+    expect((await fetchAllSpasmEventsV2ByParentId(
+      validDmpEventSignedClosed.signature, poolTest
+    ))[0].content).toStrictEqual("upvote")
+
+    expect(await insertSpasmEventV2(
+      validDmpReactionDownvoteSignedClosed, poolTest
+    )).toStrictEqual(true)
+
+    expect((await fetchAllSpasmEventsV2ByParentId(
+      validDmpEventSignedClosed.signature, poolTest
+    ))[1].content).toStrictEqual("downvote")
+
+    // Clean up db table after testing.
+    expect(await cleanDbTable("spasm_events", poolTest)
+    ).toStrictEqual(true);
+
+    expect(await howManyEntriesInTable("spasm_events", poolTest)
+    ).toStrictEqual(0)
+  });
+});
+
+// applySpasmEventReactionV2()
+describe("applySpasmEventReactionV2() function tests", () => {
+  test("should return true if passed true", async () => {
+    const input = true;
+    const output = true;
+    expect(input).toStrictEqual(output);
+
+    // Clean up db table before testing.
+    expect(await cleanDbTable("spasm_events", poolTest)
+    ).toStrictEqual(true);
+
+    expect(await howManyEntriesInTable("spasm_events", poolTest)
+    ).toStrictEqual(0)
+
+    // tests here
+    expect(await insertSpasmEventV2(
+      validDmpEventSignedClosed, poolTest
+    )).toStrictEqual(true)
+
+    const genesisBeforeAnything = await fetchSpasmEventV2ById(
+      validDmpEventSignedClosed.signature, poolTest
+    )
     expect(
-      await howManyEntriesInTable("spasm_events", poolTest)
+      genesisBeforeAnything?.title
+    ).toStrictEqual("genesis")
+    expect(
+      genesisBeforeAnything?.stats
+    ).toStrictEqual(undefined)
+    expect(
+      genesisBeforeAnything?.stats?.length
+    ).toStrictEqual(undefined)
+    expect(
+      genesisBeforeAnything?.stats?.[0].action
+    ).toStrictEqual(undefined)
+    expect(
+      genesisBeforeAnything?.stats?.[0].total
+    ).toStrictEqual(undefined)
+    expect(
+      genesisBeforeAnything?.stats?.[0].latestTimestamp
+    ).toStrictEqual(undefined)
+    expect(
+      genesisBeforeAnything?.stats?.[0].latestDbTimestamp
+    ).toStrictEqual(undefined)
+    expect(
+      genesisBeforeAnything?.stats?.[0].contents?.length
+    ).toStrictEqual(undefined)
+    expect(
+      genesisBeforeAnything?.stats?.[0].contents?.[0].total
+    ).toStrictEqual(undefined)
+
+    // Unsigned events shouldn't be counted
+    expect(await incrementSpasmEventActionV2(
+      validDmpReactionUpvote, poolTest
+    )).toStrictEqual(false)
+
+    // Events with invalid signatures shouldn't be counted
+    expect(await incrementSpasmEventActionV2(
+      invalidDmpReactionUpvoteSignedClosedWrongSignature, poolTest
+    )).toStrictEqual(false)
+
+    const genesisAfterFailedIncrements = await fetchSpasmEventV2ById(
+      validDmpEventSignedClosed.signature, poolTest
+    )
+    expect(
+      genesisAfterFailedIncrements?.title
+    ).toStrictEqual("genesis")
+    expect(
+      genesisAfterFailedIncrements?.stats
+    ).toStrictEqual(undefined)
+
+    // Add one upvote
+    expect(await incrementSpasmEventActionV2(
+      validDmpReactionUpvoteSignedClosed, poolTest
+    )).toStrictEqual(true)
+    const genesisAfterUpvote = await fetchSpasmEventV2ById(
+      validDmpEventSignedClosed.signature, poolTest
+    )
+    expect(
+      genesisAfterUpvote?.stats?.length
+    ).toStrictEqual(1)
+    expect(
+      genesisAfterUpvote?.stats?.[0].action
+    ).toStrictEqual("react")
+    expect(
+      genesisAfterUpvote?.stats?.[0].total
+    ).toStrictEqual(1)
+    expect(
+      typeof(genesisAfterUpvote?.stats?.[0].latestTimestamp)
+    ).toStrictEqual("number")
+    expect(
+      genesisAfterUpvote?.stats?.[0].latestTimestamp
+    ).toStrictEqual(
+      validDmpReactionUpvoteSignedClosedConvertedToSpasmEventV2
+        .timestamp
+    )
+    // expect(
+    //   typeof(genesisAfterUpvote?.stats?.[0].latestDbTimestamp)
+    // ).toStrictEqual("number")
+    expect(
+      genesisAfterUpvote?.stats?.[0].contents?.length
+    ).toStrictEqual(1)
+    expect(
+      genesisAfterUpvote?.stats?.[0].contents?.[0].value
+    ).toStrictEqual("upvote")
+    expect(
+      genesisAfterUpvote?.stats?.[0].contents?.[0].total
+    ).toStrictEqual(1)
+
+    // Add one more upvote
+    expect(await incrementSpasmEventActionV2(
+      validDmpReactionUpvoteDiffSignerSignedClosed, poolTest
+    )).toStrictEqual(true)
+    const genesisAfterUpvoteUpvote = await fetchSpasmEventV2ById(
+      validDmpEventSignedClosed.signature, poolTest
+    )
+    expect(
+      genesisAfterUpvoteUpvote?.stats?.length
+    ).toStrictEqual(1)
+    expect(
+      genesisAfterUpvoteUpvote?.stats?.[0].action
+    ).toStrictEqual("react")
+    expect(
+      genesisAfterUpvoteUpvote?.stats?.[0].total
+    ).toStrictEqual(2)
+    expect(
+      typeof(genesisAfterUpvote?.stats?.[0].latestTimestamp)
+    ).toStrictEqual("number")
+    expect(
+      genesisAfterUpvoteUpvote?.stats?.[0].latestTimestamp
+    ).toStrictEqual(
+      validDmpReactionUpvoteDiffSignerSignedClosedConvertedToSpasmEventV2
+        .timestamp
+    )
+    expect(
+      genesisAfterUpvoteUpvote?.stats?.[0].contents?.length
+    ).toStrictEqual(1)
+    expect(
+      genesisAfterUpvoteUpvote?.stats?.[0].contents?.[0].value
+    ).toStrictEqual("upvote")
+    expect(
+      genesisAfterUpvoteUpvote?.stats?.[0].contents?.[0].total
+    ).toStrictEqual(2)
+
+    // Add one downvote
+    expect(await incrementSpasmEventActionV2(
+      validDmpReactionDownvoteSignedClosed, poolTest
+    )).toStrictEqual(true)
+    const genesisAfterUpUpDown = await fetchSpasmEventV2ById(
+      validDmpEventSignedClosed.signature, poolTest
+    )
+    expect(
+      genesisAfterUpUpDown?.stats?.length
+    ).toStrictEqual(1)
+    expect(
+      genesisAfterUpUpDown?.stats?.[0].action
+    ).toStrictEqual("react")
+    expect(
+      genesisAfterUpUpDown?.stats?.[0].total
+    ).toStrictEqual(3)
+    expect(
+      genesisAfterUpUpDown?.stats?.[0].contents?.length
+    ).toStrictEqual(2)
+    expect(
+      genesisAfterUpvote?.stats?.[0].contents?.[0].value
+    ).toStrictEqual("upvote")
+    expect(
+      genesisAfterUpUpDown?.stats?.[0].contents?.[0].total
+    ).toStrictEqual(2)
+    expect(
+      genesisAfterUpUpDown?.stats?.[0].contents?.[1].value
+    ).toStrictEqual("downvote")
+    expect(
+      genesisAfterUpUpDown?.stats?.[0].contents?.[1].total
+    ).toStrictEqual(1)
+
+    // Add one reply
+    expect(await incrementSpasmEventActionV2(
+      validDmpReplySignedClosed, poolTest
+    )).toStrictEqual(true)
+    const genesisAfterUpUpDownReply =
+      await fetchSpasmEventV2ById(
+      validDmpEventSignedClosed.signature, poolTest
+    )
+    expect(
+      genesisAfterUpUpDownReply?.stats?.length
+    ).toStrictEqual(2)
+    expect(
+      genesisAfterUpUpDownReply?.stats?.[0].action
+    ).toStrictEqual("react")
+    expect(
+      genesisAfterUpUpDownReply?.stats?.[0].total
+    ).toStrictEqual(3)
+    expect(
+      genesisAfterUpUpDownReply?.stats?.[0].contents?.length
+    ).toStrictEqual(2)
+    expect(
+      genesisAfterUpUpDownReply?.stats?.[0].contents?.[0].value
+    ).toStrictEqual("upvote")
+    expect(
+      genesisAfterUpUpDownReply?.stats?.[0].contents?.[0].total
+    ).toStrictEqual(2)
+    expect(
+      genesisAfterUpUpDownReply?.stats?.[0].contents?.[1].value
+    ).toStrictEqual("downvote")
+    expect(
+      genesisAfterUpUpDownReply?.stats?.[0].contents?.[1].total
+    ).toStrictEqual(1)
+    expect(
+      genesisAfterUpUpDownReply?.stats?.[1].action
+    ).toStrictEqual("reply")
+    expect(
+      genesisAfterUpUpDownReply?.stats?.[1].total
+    ).toStrictEqual(1)
+
+    // Add one more reply
+    expect(await incrementSpasmEventActionV2(
+      validDmpReplyDiffSignerSignedClosed, poolTest
+    )).toStrictEqual(true)
+    const genesisAfterUpUpDownReplyReply =
+      await fetchSpasmEventV2ById(
+      validDmpEventSignedClosed.signature, poolTest
+    )
+    expect(
+      genesisAfterUpUpDownReplyReply?.stats?.length
+    ).toStrictEqual(2)
+    expect(
+      genesisAfterUpUpDownReplyReply?.stats?.[0].action
+    ).toStrictEqual("react")
+    expect(
+      genesisAfterUpUpDownReplyReply?.stats?.[0].total
+    ).toStrictEqual(3)
+    expect(
+      genesisAfterUpUpDownReplyReply?.stats?.[0].contents?.length
+    ).toStrictEqual(2)
+    expect(
+      genesisAfterUpUpDownReplyReply?.stats?.[0].contents?.[0].value
+    ).toStrictEqual("upvote")
+    expect(
+      genesisAfterUpUpDownReplyReply?.stats?.[0].contents?.[0].total
+    ).toStrictEqual(2)
+    expect(
+      genesisAfterUpUpDownReplyReply?.stats?.[0].contents?.[1].value
+    ).toStrictEqual("downvote")
+    expect(
+      genesisAfterUpUpDownReplyReply?.stats?.[0].contents?.[1].total
+    ).toStrictEqual(1)
+    expect(
+      genesisAfterUpUpDownReplyReply?.stats?.[1].action
+    ).toStrictEqual("reply")
+    expect(
+      genesisAfterUpUpDownReplyReply?.stats?.[1].total
+    ).toStrictEqual(2)
+
+    // Clean up db table after testing.
+    expect(await cleanDbTable("spasm_events", poolTest)
+    ).toStrictEqual(true);
+
+    expect(await howManyEntriesInTable("spasm_events", poolTest)
+    ).toStrictEqual(0)
+  });
+});
+
+// incrementSpasmEventStats()
+describe("incrementSpasmEventStats() tests", () => {
+  test("should return true if passed true", async () => {
+    const input = true;
+    const output = true;
+    expect(input).toStrictEqual(output);
+
+    // Clean up db table before testing.
+    expect(await cleanDbTable("spasm_events", poolTest)
+    ).toStrictEqual(true);
+
+    expect(await howManyEntriesInTable("spasm_events", poolTest)
     ).toStrictEqual(0)
 
     // tests here
 
     // Clean up db table after testing.
-    expect(
-      await cleanDbTable("spasm_events", poolTest)
+    expect(await cleanDbTable("spasm_events", poolTest)
     ).toStrictEqual(true);
 
-    expect(
-      await howManyEntriesInTable("spasm_events", poolTest)
+    expect(await howManyEntriesInTable("spasm_events", poolTest)
+    ).toStrictEqual(0)
+  });
+});
+
+// template()
+describe("template() function tests", () => {
+  test("should return true if passed true", async () => {
+    const input = true;
+    const output = true;
+    expect(input).toStrictEqual(output);
+
+    // Clean up db table before testing.
+    expect(await cleanDbTable("spasm_events", poolTest)
+    ).toStrictEqual(true);
+
+    expect(await howManyEntriesInTable("spasm_events", poolTest)
+    ).toStrictEqual(0)
+
+    // tests here
+
+    // Clean up db table after testing.
+    expect(await cleanDbTable("spasm_events", poolTest)
+    ).toStrictEqual(true);
+
+    expect(await howManyEntriesInTable("spasm_events", poolTest)
     ).toStrictEqual(0)
   });
 });

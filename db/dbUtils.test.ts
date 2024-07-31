@@ -3,8 +3,8 @@ import {
   initializeDatabaseTest,
 } from './dbUtils';
 
-// temlate()
-describe("temlate() function tests", () => {
+// template()
+describe("template() function tests", () => {
   test("should return true if passed true", () => {
     const input = true;
     const output = true;

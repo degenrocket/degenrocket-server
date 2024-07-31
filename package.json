@@ -4,14 +4,22 @@
   "license": "MIT",
   "description": "",
   "main": "index.js",
+  "_commentsAboutScripts": {
+    "jest": {
+      "runInBand": "Added to run tests sequentially to avoid parallel execution issues when working with the database."
+    }
+  },
   "scripts": {
     "dev-simple": "NODE_ENV=dev nodemon api/index.ts",
     "dev": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node api/index.ts",
     "build": "rm -rf dist && npx tsc",
     "start": "nodemon dist/api/index.js",
-    "test": "npm run build && cross-env NODE_ENV=dev jest --testTimeout=5000 --silent=false --verbose=false --forceExit",
-    "test-inspect": "npm run build && cross-env NODE_ENV=dev jest --testTimeout=5000 --detectOpenHandles --silent=false --verbose=false",
-    "test-watch": "npm run build && cross-env NODE_ENV=dev jest --testTimeout=5000 --detectOpenHandles --silent=false --verbose=false --watchAll",
+    "test": "npm run build && cross-env NODE_ENV=dev jest --testTimeout=5000 --silent=false --verbose=false --forceExit --runInBand",
+    "test-utils": "npm run build && cross-env NODE_ENV=dev jest ./helper/utils/utils.test.ts --testTimeout=5000 --silent=false --verbose=false --forceExit --runInBand",
+    "test-sqlutils": "npm run build && cross-env NODE_ENV=dev jest ./helper/sql/sqlUtils.test.ts --testTimeout=5000 --silent=false --verbose=false --forceExit --runInBand",
+    "test-current": "npm run build && cross-env NODE_ENV=dev jest ./helper/sql/submitSpasmEvent.test.ts --testTimeout=5000 --silent=false --verbose=false --forceExit --runInBand",
+    "test-inspect": "npm run build && cross-env NODE_ENV=dev jest --testTimeout=5000 --detectOpenHandles --silent=false --verbose=false --runInBand",
+    "test-watch": "npm run build && cross-env NODE_ENV=dev jest --testTimeout=5000 --detectOpenHandles --silent=false --verbose=false --watchAll --runInBand",
     "prod": "npm run build && npm run start-prod",
     "stage": "npm run build && npm run start-stage",
     "start-prod": "pm2 start ecosystem-prod.config.js",

@@ -1,4 +1,6 @@
 import {
+  ConfigForSubmitSpasmEvent,
+  CustomConfigForSubmitSpasmEvent,
   UnknownEventV2
 } from "../../types/interfaces";
 
@@ -247,3 +249,61 @@ export const getCommonValuesInArrays = (
   return commonValues
 }
 
+export const mergeObjects = (
+  defaultObject: Object,
+  customObject: Object
+): Object => {
+  if (
+    !isObjectWithValues(defaultObject) &&
+    !isObjectWithValues(customObject)
+  ) return {}
+  if (
+    isObjectWithValues(defaultObject) &&
+    !isObjectWithValues(customObject)
+  ) return defaultObject
+  if (
+    !isObjectWithValues(defaultObject) &&
+    isObjectWithValues(customObject)
+  ) return customObject
+
+  const mergedObject: Object = { ...defaultObject };
+
+  for (const key in customObject) {
+    const value = customObject[key];
+    if (
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      value !== null
+    ) {
+      // If the value is an object, recursively merge it
+      mergedObject[key] = mergeObjects(defaultObject[key], value);
+    } else if (
+      value !== undefined
+    ) {
+      mergedObject[key] = value
+    }
+  }
+
+  return mergedObject
+}
+
+export const mergeConfigsForSubmitSpasmEvent = (
+  defaultConfig: ConfigForSubmitSpasmEvent,
+  customConfig: CustomConfigForSubmitSpasmEvent
+): ConfigForSubmitSpasmEvent => {
+  const newConfig = mergeObjects(defaultConfig, customConfig)
+  return newConfig as ConfigForSubmitSpasmEvent
+}
+
+// The Set data structure only stores unique values.
+// When the array is converted into a Set, any duplicate values
+// are automatically removed. Then, the spread operator (...)
+// is used to convert the Set back into an array 1.
+export const removeDuplicatesFromArray = (
+  array: (string | number)[]
+): (string | number)[] => {
+  if (!Array.isArray(array)) {
+    return []
+  }
+  return [...new Set(array)];
+}

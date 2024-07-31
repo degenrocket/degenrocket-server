@@ -1,3 +1,4 @@
+import {ConfigForSubmitSpasmEvent} from '../../types/interfaces';
 import {
   validSpasmEventRssItemV0,
   validSpasmEventRssItemV0ConvertedToSpasmV2
@@ -8,6 +9,7 @@ import {
   getCommonValuesInArrays,
   hasCommonValuesInArrays,
   ifEventContainsHtmlTags,
+  mergeConfigsForSubmitSpasmEvent,
   // executeFunctionForAllNestedValuesOfType,
 } from './utils';
 const { spasm } = require('spasm.js');
@@ -141,6 +143,7 @@ with a **bold** [link](https://example.com)`;
 
 // ifEventContainsHtmlTags()
 describe("ifEventContainsHtmlTags() function tests", () => {
+  // TODO
 });
 
 // sanitizeEvent()
@@ -372,5 +375,31 @@ describe("ifEventContainsHtmlTags() tests", () => {
     expect(getCommonValuesInArrays(arr3, arr7)).toEqual([3]);
     expect(getCommonValuesInArrays(arr4, arr7)).toEqual(["six"]);
     expect(getCommonValuesInArrays(arr7, arr8)).toEqual([ 5, "eight"]);
+  });
+});
+
+// template()
+describe("template() function tests", () => {
+  test("should return true if passed true", async () => {
+    const defaultConfig = new ConfigForSubmitSpasmEvent()
+    const customConfig = new ConfigForSubmitSpasmEvent()
+    customConfig.web3.signature.ethereum.enabled = false
+
+    const input = mergeConfigsForSubmitSpasmEvent(
+      defaultConfig, customConfig
+    )
+    const output = new ConfigForSubmitSpasmEvent()
+    output.web3.signature.ethereum.enabled = false
+
+    expect(input).toEqual(output);
+  });
+});
+
+// template()
+describe("template() function tests", () => {
+  test("should return true if passed true", async () => {
+    const input = true;
+    const output = true;
+    expect(input).toStrictEqual(output);
   });
 });

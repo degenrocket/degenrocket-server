@@ -194,6 +194,7 @@ export async function verifyTableStructure(
   dbConfig = DB_CONFIG_DEFAULT
 ) {
   const client = new Client(dbConfig);
+  const { database } = dbConfig;
 
   await client.connect();
 
@@ -206,21 +207,37 @@ export async function verifyTableStructure(
     const res = await client.query(query, [tableName]);
 
     if (res.rows.length === 0) {
-      console.error(`Table ${tableName} does not exist.`);
+      console.error(`Table '${tableName}' does not exist in database '${database}'.`);
       return false;
     }
 
-    for (const column of res.rows) {
-      if (!expectedColumns[column.column_name] || expectedColumns[column.column_name] !== column.data_type) {
-        console.error(`Column ${column.column_name} in table ${tableName} does not match expected data type.`);
+    // Check if all expected columns are present
+    for (const key in expectedColumns) {
+      let found = false;
+      for (const column of res.rows) {
+        if (key === column.column_name) {
+          found = true;
+          break; // Found the expected column, no need to continue checking
+        }
+      }
+      if (!found) {
+        console.error(`ERROR: Expected column '${key}' is missing in table '${tableName}' in database '${database}'. You'll have to manually delete the table with "DROP TABLE ${tableName};" query in database '${database}' and then recreate the table again, e.g., by running database migration or initialization scripts.`);
         return false;
       }
     }
 
-    console.log(`Table ${tableName} has the correct structure.`);
+    // Check if all columns have the correct data type
+    for (const column of res.rows) {
+      if (!expectedColumns[column.column_name] || expectedColumns[column.column_name] !== column.data_type) {
+        console.error(`ERROR: Column '${column.column_name}' in table '${tableName}' does not match expected data type in database '${database}'.`);
+        return false;
+      }
+    }
+
+    console.log(`Table '${tableName}' in database '${database}' has the correct structure.`);
     return true;
   } catch (error) {
-    console.error(`Error verifying table structure: ${error}`);
+    console.error(`ERROR: received an error while verifying table structure in database '${database}': ${error}`);
     return false;
   } finally {
     client.end();
@@ -242,6 +259,7 @@ const expectedColumnsPosts = {
 
 const expectedColumnsSpasmEvents = {
   spasm_event: 'jsonb',
+  stats: 'jsonb',
   db_key: 'integer',
   db_added_timestamp: 'bigint',
   db_updated_timestamp: 'bigint'

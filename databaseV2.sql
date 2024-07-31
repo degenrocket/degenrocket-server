@@ -77,6 +77,7 @@ BEGIN
         CREATE TABLE spasm_events (
             -- TODO
             spasm_event JSONB,
+            stats JSONB,
             db_key SERIAL PRIMARY KEY NOT NULL,
             db_added_timestamp BIGINT,
             db_updated_timestamp BIGINT
