@@ -15,6 +15,7 @@ import {
   validDmpReactionUpvoteDiffSignerSignedClosedConvertedToSpasmEventV2,
   validDmpReactionUpvoteSignedClosed,
   validDmpReactionUpvoteSignedClosedConvertedToSpasmEventV2,
+  validDmpReactionUpvoteSignedClosedDuplicate,
   validDmpReplySignedClosed,
   validNostrSpasmModerateEvent,
   validPostWithRssItem,
@@ -273,6 +274,54 @@ describe("multiple tests for submitSpasmEvent", () => {
     ).toStrictEqual("upvote")
     expect(
       genesisAfterUpvote?.stats?.[0].contents?.[0].total
+    ).toStrictEqual(1)
+
+    // Add one upvote duplicate
+    // The duplicate event has the same action, content, and
+    // signer, but different signature, because it's technically
+    // a different event.
+    // Stats should not change when a duplicate is submitted.
+    customConfig.web3.action.react.enabled = true
+    expect(await submitSpasmEvent(
+      validDmpReactionUpvoteSignedClosedDuplicate,
+      poolTest,
+      customConfig
+    )).toStrictEqual("Success. The event was saved into database")
+    expect(
+      await howManyEntriesInTable("spasm_events", poolTest)
+    ).toStrictEqual(3)
+    const genesisAfterUpvoteAndDuplicate = await fetchSpasmEventV2ById(
+      validDmpEventSignedClosed.signature, poolTest
+    )
+    expect(
+      genesisAfterUpvoteAndDuplicate?.stats?.length
+    ).toStrictEqual(1)
+    expect(
+      genesisAfterUpvoteAndDuplicate?.stats?.[0].action
+    ).toStrictEqual("react")
+    expect(
+      genesisAfterUpvoteAndDuplicate?.stats?.[0].total
+    ).toStrictEqual(1)
+    expect(
+      typeof(genesisAfterUpvoteAndDuplicate?.stats?.[0].latestTimestamp)
+    ).toStrictEqual("number")
+    expect(
+      genesisAfterUpvoteAndDuplicate?.stats?.[0].latestTimestamp
+    ).toStrictEqual(
+      validDmpReactionUpvoteSignedClosedConvertedToSpasmEventV2
+        .timestamp
+    )
+    // expect(
+    //   typeof(genesisAfterUpvote?.stats?.[0].latestDbTimestamp)
+    // ).toStrictEqual("number")
+    expect(
+      genesisAfterUpvoteAndDuplicate?.stats?.[0].contents?.length
+    ).toStrictEqual(1)
+    expect(
+      genesisAfterUpvoteAndDuplicate?.stats?.[0].contents?.[0].value
+    ).toStrictEqual("upvote")
+    expect(
+      genesisAfterUpvoteAndDuplicate?.stats?.[0].contents?.[0].total
     ).toStrictEqual(1)
 
     // Add one more upvote

@@ -24,6 +24,8 @@
     "stage": "npm run build && npm run start-stage",
     "start-prod": "pm2 start ecosystem-prod.config.js",
     "start-stage": "pm2 start ecosystem-stage.config.js",
+    "verify-db": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/info/verify-db.ts",
+    "display-stats-db": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/info/display-stats-db.ts",
     "initialize-db": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/setup/initialize-db.ts",
     "migrate": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/migrations/v2/00_migrateToV2.ts",
     "migrate-01": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/migrations/v2/01_createDbTables.ts",

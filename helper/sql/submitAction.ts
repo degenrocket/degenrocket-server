@@ -474,7 +474,7 @@ const incrementActionsCountTable = async (
 ): Promise<boolean> => {
   console.log("increment action:", action);
   console.log("increment target:", target);
-  console.log("increment text:", text);
+  // console.log("increment text:", text);
   const tableName = 'actions_count'
   try {
     const isTargetAlreadyInTable = await pool.query(`

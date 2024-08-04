@@ -5,7 +5,8 @@ import {
   SpasmEventIdFormatNameV2,
   SpasmEventV2,
   UnknownEventV2,
-  SpasmEventStatV2
+  SpasmEventStatV2,
+  FeedFilters
 } from "../../types/interfaces";
 import {
   hasValue,
@@ -1258,4 +1259,32 @@ export const incrementStatsV2ForThisEvent = async (
   //   SET (event -> 'stats' -> #>> '{action}') = (event -> 'stats' -> #>> '{action}') + 1
   //   WHERE event @> $1::jsonb
   // `;
+}
+
+export const fetchAllSpasmEventsV2ByFilter = async (
+  // TODO
+  filters: FeedFilters,
+  pool = poolDefault,
+  dirtyDbTable = "spasm_events"
+): Promise<SpasmEventV2 | null> => {
+  console.log("filters:", filters)
+  let limit = 20
+  if (typeof(filters.limitWeb3) === "number") {
+    limit = filters.limitWeb3
+  }
+
+  try {
+    const dbTable = DOMPurify.sanitize(dirtyDbTable)
+    const checkEvents = await pool.query(`
+      SELECT *
+      FROM ${dbTable}
+      LIMIT $1
+    `, [limit])
+
+    if (checkEvents.rows.length > 0) return checkEvents.rows
+  } catch (err) {
+    console.error(err);
+  }
+
+  return null
 }

@@ -14,6 +14,9 @@ import { submitAction } from "../helper/sql/submitAction";
 // import { fetchPostsFromRssSources } from "../helper/rss/fetchPostsFromRssSources";
 import { QueryFeedFilters, FeedFilters } from "../types/interfaces";
 import { isObjectWithValues } from "../helper/utils/utils";
+import {submitSpasmEvent} from "../helper/sql/submitSpasmEvent";
+import {fetchAllSpasmEventsV2ByFilter} from "../helper/sql/sqlUtils";
+import {poolDefault} from "../db";
 
 dotenv.config();
 
@@ -56,6 +59,19 @@ app.get("/api/posts", async(req: Request, res: Response) => {
 
   try {
       const posts = await fetchAllPosts(filters)
+      setTimeout(() => { res.json(posts) }, 200)
+      // res.json(posts);
+  } catch (err) {
+    console.error(err);
+    res.json(err);
+  }
+})
+
+app.get("/api/events", async(req: Request, res: Response) => {
+  try {
+      const posts = await fetchAllSpasmEventsV2ByFilter(
+        {limitWeb3:30}, poolDefault, "spasm_events"
+      )
       setTimeout(() => { res.json(posts) }, 200)
       // res.json(posts);
   } catch (err) {
@@ -205,6 +221,14 @@ app.post("/api/submit/", async (req: Request, res: Response) => {
   // console.log("===========================================")
   // console.log('POST on /api/submit/ was called');
 
+  // Submit V2
+  if ('unknownEvent' in req.body) {
+    await submitSpasmEvent(req.body.unknownEvent); 
+  } else {
+    await submitSpasmEvent(req.body); 
+  }
+
+  // Submit V0/V1
   const submitResult = await submitAction(req.body); 
   // console.log("Sending submitResult to front:", submitResult)
 

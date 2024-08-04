@@ -186,13 +186,14 @@ export const getTotalEntriesInDb = async (
     console.error('Error fetching table names', error);
     return [];
  }
-};
+}
 
-export async function verifyTableStructure(
+export const verifyTableStructure = async (
   tableName: string,
   expectedColumns: { [key: string]: string },
-  dbConfig = DB_CONFIG_DEFAULT
-) {
+  dbConfig = DB_CONFIG_DEFAULT,
+  ifTryToAutoFixProblems = false
+) => {
   const client = new Client(dbConfig);
   const { database } = dbConfig;
 
@@ -221,8 +222,23 @@ export async function verifyTableStructure(
         }
       }
       if (!found) {
-        console.error(`ERROR: Expected column '${key}' is missing in table '${tableName}' in database '${database}'. You'll have to manually delete the table with "DROP TABLE ${tableName};" query in database '${database}' and then recreate the table again, e.g., by running database migration or initialization scripts.`);
-        return false;
+        if (ifTryToAutoFixProblems) {
+          console.log(`Expected column '${key}' of type '${expectedColumns[key]}' is missing in table '${tableName}' in database '${database}'.`);
+          console.log(`Auto-fix is enabled so let's try to fix the problem by creating a column.`)
+          const addedSuccess = await addColumnOfTypeToDbTable(
+            key, expectedColumns[key], tableName, dbConfig
+          )
+          if (addedSuccess) {
+            console.log(`Successfully added column '${key}'.`)
+            return true
+          } else {
+            console.error(`Failed to add column '${key}'.`)
+            return false
+          }
+        } else {
+          console.error(`ERROR: Expected column '${key}' of type '${expectedColumns[key]}' is missing in table '${tableName}' in database '${database}'. You'll have to manually delete the table with "DROP TABLE ${tableName};" query in database '${database}' and then recreate the table again, e.g., by running database migration or initialization scripts.`);
+          return false;
+        }
       }
     }
 
@@ -238,6 +254,35 @@ export async function verifyTableStructure(
     return true;
   } catch (error) {
     console.error(`ERROR: received an error while verifying table structure in database '${database}': ${error}`);
+    return false;
+  } finally {
+    client.end();
+  }
+}
+
+export const addColumnOfTypeToDbTable = async (
+  columnName: string,
+  columnDataType: string,
+  tableName: string,
+  dbConfig = DB_CONFIG_DEFAULT
+): Promise<boolean> => {
+  const client = new Client(dbConfig);
+  const { database } = dbConfig;
+
+  await client.connect();
+
+  try {
+    const query = `
+      ALTER TABLE ${tableName}
+      ADD COLUMN ${columnName} ${columnDataType}
+    `;
+    const res = await client.query(
+      // query, [columnName, columnDataType]
+      query
+    );
+    return true
+  } catch (error) {
+    console.error(`ERROR: received an error while adding a column '${columnName}' of data type '${columnDataType}' in table '${tableName}' in database '${database}'. The error is: ${error}`);
     return false;
   } finally {
     client.end();
@@ -260,6 +305,7 @@ const expectedColumnsPosts = {
 const expectedColumnsSpasmEvents = {
   spasm_event: 'jsonb',
   stats: 'jsonb',
+  shared_by: 'jsonb',
   db_key: 'integer',
   db_added_timestamp: 'bigint',
   db_updated_timestamp: 'bigint'
@@ -286,24 +332,66 @@ const expectedColumnsRssSources = {
   db_updated_timestamp: 'bigint'
 };
 
+const expectedColumnsAdminEvents = {
+  spasm_event: 'jsonb',
+  db_key: 'integer',
+  db_added_timestamp: 'bigint',
+  db_updated_timestamp: 'bigint'
+};
+
+const expectedColumnsAppConfigs = {
+  spasm_event: 'jsonb',
+  db_key: 'integer',
+  db_added_timestamp: 'bigint',
+  db_updated_timestamp: 'bigint'
+};
+
 export const verifyDbTables = async (
-  dbConfig = DB_CONFIG_DEFAULT
+  dbConfig = DB_CONFIG_DEFAULT,
+  ifTryToAutoFixProblems = false
 ): Promise<boolean> => {
   console.log("verifyDbTables called")
-  const tablePosts = await verifyTableStructure('posts', expectedColumnsPosts, dbConfig);
+  const tablePosts = await verifyTableStructure(
+    'posts', expectedColumnsPosts,
+    dbConfig, ifTryToAutoFixProblems
+  );
   if (!tablePosts) { return false }
 
-  const tableSpasmEvents = await verifyTableStructure('spasm_events', expectedColumnsSpasmEvents, dbConfig);
+  const tableSpasmEvents = await verifyTableStructure(
+    'spasm_events', expectedColumnsSpasmEvents,
+    dbConfig, ifTryToAutoFixProblems
+  );
   if (!tableSpasmEvents) { return false }
 
-  const tableSpasmUsers = await verifyTableStructure('spasm_users', expectedColumnsSpasmUsers, dbConfig);
+  const tableSpasmUsers = await verifyTableStructure(
+    'spasm_users', expectedColumnsSpasmUsers,
+    dbConfig, ifTryToAutoFixProblems
+  );
   if (!tableSpasmUsers) { return false }
 
-  const tableSpasmSources = await verifyTableStructure('spasm_sources', expectedColumnsSpasmSources, dbConfig);
+  const tableSpasmSources = await verifyTableStructure(
+    'spasm_sources', expectedColumnsSpasmSources,
+    dbConfig, ifTryToAutoFixProblems
+  );
   if (!tableSpasmSources) { return false }
 
-  const tableRssSources = await verifyTableStructure('rss_sources', expectedColumnsRssSources, dbConfig);
+  const tableRssSources = await verifyTableStructure(
+    'rss_sources', expectedColumnsRssSources,
+    dbConfig, ifTryToAutoFixProblems
+  );
   if (!tableRssSources) { return false }
+
+  const tableAdminEvents = await verifyTableStructure(
+    'admin_events', expectedColumnsAdminEvents,
+    dbConfig, ifTryToAutoFixProblems
+  );
+  if (!tableAdminEvents) { return false }
+
+  const tableAppConfigs = await verifyTableStructure(
+    'app_configs', expectedColumnsAppConfigs,
+    dbConfig, ifTryToAutoFixProblems
+  );
+  if (!tableAppConfigs) { return false }
 
   console.log("verifyDbTables finished")
   return true
@@ -312,13 +400,16 @@ export const verifyDbTables = async (
 const initializeDatabase = async (
   databaseName = dbName,
   dbConfigWithoutDatabase = DB_CONFIG_DEFAULT_WITHOUT_DATABASE,
-  dbConfig = DB_CONFIG_DEFAULT
+  dbConfig = DB_CONFIG_DEFAULT,
+  ifTryToAutoFixProblems = false
 ): Promise<boolean> => {
   await createDatabase(databaseName, dbConfigWithoutDatabase)
 
   await createDbTables(dbConfig)
 
-  const verificationStep = await verifyDbTables(dbConfig)
+  const verificationStep = await verifyDbTables(
+    dbConfig, ifTryToAutoFixProblems
+  )
 
   console.log("verificationStep:", verificationStep)
 
@@ -340,7 +431,9 @@ export const initializeDatabaseMain = async (
   return await initializeDatabase(
     dbName,
     DB_CONFIG_DEFAULT_WITHOUT_DATABASE,
-    DB_CONFIG_DEFAULT
+    DB_CONFIG_DEFAULT,
+    // Try to auto-fix issues (might mess up db)
+    true
   )
 }
 
@@ -350,7 +443,9 @@ export const initializeDatabaseTest = async (
   return await initializeDatabase(
     dbNameTest,
     DB_CONFIG_TEST_WITHOUT_DATABASE,
-    DB_CONFIG_TEST
+    DB_CONFIG_TEST,
+    // Try to auto-fix issues (might mess up db)
+    true
   )
 }
 

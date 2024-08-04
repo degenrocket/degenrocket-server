@@ -1,8 +1,10 @@
 import { getFeed } from "./getFeed";
 import { stripFeedItem } from "./stripFeedItem";
-import { pool } from "../../db";
+import { pool, poolDefault } from "../../db";
 import fs from 'fs';
 import path from 'path';
+import {SpasmEventV0} from "../../types/interfaces";
+import {submitSpasmEvent} from "../sql/submitSpasmEvent";
 // RSS module is disabled by default
 const enableRssModule = process.env.ENABLE_RSS_MODULE === 'true' ? true : false
 const enableRssSourcesUpdates = process.env.ENABLE_RSS_SOURCES_UPDATES === 'true' ? true : false
@@ -69,9 +71,34 @@ export const fetchPostsFromRssSources = async (frequency) => {
       // TODO: refactor. Check if items exist
       data ? data.items.forEach(strip) : console.log("data is null");
       // data ? data.items.forEach(filterData) : console.log("data is null");
-      data
-        ? await Promise.all(data.items.map(filterData))
-        : console.log("data for filterData is null")
+
+      if (data) {
+        // Submit V0/V1 to 'posts' table
+        await Promise.all(data.items.map(filterData))
+        // Submit V2 to 'spasm_events' table
+        await Promise.all(data.items.map((item) => {
+          const post: SpasmEventV0 = {}
+          if (item.guid) { post.guid = item.guid }
+          if (item.source) { post.source = item.source }
+          if (item.category) { post.category = item.category }
+          if (item.tickers) { post.tickers = item.tickers }
+          if (item.title) { post.title = item.title }
+          if (item.link) { post.url = item.link }
+          if (item.pubDate) { post.pubdate = item.pubDate }
+          if (item.contentSnippet) {
+            post.description = item.contentSnippet
+          }
+
+          submitSpasmEvent(post, poolDefault)
+        }))
+      } else {
+        console.log("data for filterData is null")
+      }
+
+      // data
+      //   ? await Promise.all(data.items.map(filterData))
+      //   : console.log("data for filterData is null")
+
       return data
         ? true
         : false

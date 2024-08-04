@@ -58,6 +58,7 @@ export const stripFeedItem = (feedItem) => {
   // console.log("feedItem.description before pick:", feedItem.description)
 
   // contentSnippet is description in rss-parser
+  // TODO replace lodash _.pick function with native one
   _.pick(feedItem, ["guid", "source", "tickers", "title", "link", "contentSnippet", "pubDate"]);
   
   // strip off '?source=' or '?utm_source=' and everything after that

@@ -1,8 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 import axios, { AxiosResponse } from 'axios';
-import { SpasmSource, Post, IgnoreWhitelistFor } from "../../types/interfaces";
+import { SpasmSource, Post, IgnoreWhitelistFor, ConfigForSubmitSpasmEvent } from "../../types/interfaces";
 import { submitAction } from "../sql/submitAction";
+import {submitSpasmEvent} from '../sql/submitSpasmEvent';
+import {poolDefault} from '../../db';
 // SPASM module is disabled by default
 const enableSpasmModule: boolean = process.env.ENABLE_SPASM_MODULE === 'true' ? true : false
 const enableSpasmSourcesUpdates: boolean = process.env.ENABLE_SPASM_SOURCES_UPDATES === 'true' ? true : false
@@ -119,12 +121,29 @@ export const fetchPostsFromSpasmSources = async (frequency?: string) => {
         ) {
           arrayOfPosts.push(response.data)
         }
-        await Promise.all(arrayOfPosts.map((post) =>
-          submitAction(
+        await Promise.all(arrayOfPosts.map((post) => {
+          // Submit V2
+          // TODO tbc add environment variables:
+          // - ignoreWhitelistForActionReactInSpasmModule
+          // - ignoreWhitelistForActionReplyInSpasmModule
+          // - ignoreWhitelistForActionModerateInSpasmModule
+          // - ignoreWhitelistForActionEditInSpasmModule
+          const customConfig = new ConfigForSubmitSpasmEvent()
+          if (ignoreWhitelistForActionPostInSpasmModule) {
+            customConfig.whitelist.action.post.enabled = false
+            customConfig.whitelist.action.react.enabled = false
+            customConfig.whitelist.action.reply.enabled = false
+            submitSpasmEvent(post, poolDefault, customConfig)
+          } else {
+            submitSpasmEvent(post, poolDefault, customConfig)
+          }
+
+          // Submit V0/V1
+          return submitAction(
             { unknownEvent: post },
             ignoreWhitelistFor
           )
-        ))
+        }))
       } else {
         console.log("data for submitAction is null")
       }

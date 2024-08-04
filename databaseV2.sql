@@ -78,6 +78,7 @@ BEGIN
             -- TODO
             spasm_event JSONB,
             stats JSONB,
+            shared_by JSONB,
             db_key SERIAL PRIMARY KEY NOT NULL,
             db_added_timestamp BIGINT,
             db_updated_timestamp BIGINT
@@ -137,6 +138,28 @@ BEGIN
     ) THEN
         CREATE TABLE extra_items (
             extra_item JSONB,
+            db_key SERIAL PRIMARY KEY NOT NULL,
+            db_added_timestamp BIGINT,
+            db_updated_timestamp BIGINT
+        );
+    END IF;
+    IF NOT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'admin_events'
+    ) THEN
+        CREATE TABLE admin_events (
+            spasm_event JSONB,
+            db_key SERIAL PRIMARY KEY NOT NULL,
+            db_added_timestamp BIGINT,
+            db_updated_timestamp BIGINT
+        );
+    END IF;
+    IF NOT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'app_configs'
+    ) THEN
+        CREATE TABLE app_configs (
+            spasm_event JSONB,
             db_key SERIAL PRIMARY KEY NOT NULL,
             db_added_timestamp BIGINT,
             db_updated_timestamp BIGINT

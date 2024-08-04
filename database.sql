@@ -67,6 +67,8 @@ CREATE TABLE public.actions_count (
 
 CREATE TABLE spasm_events (
     spasm_event JSONB,
+    stats JSONB,
+    shared_by JSONB,
     db_key SERIAL PRIMARY KEY NOT NULL,
     db_added_timestamp BIGINT,
     db_updated_timestamp BIGINT
@@ -95,6 +97,20 @@ CREATE TABLE rss_sources (
 
 CREATE TABLE extra_items (
     extra_item JSONB,
+    db_key SERIAL PRIMARY KEY NOT NULL,
+    db_added_timestamp BIGINT,
+    db_updated_timestamp BIGINT
+);
+
+CREATE TABLE admin_events (
+    spasm_event JSONB,
+    db_key SERIAL PRIMARY KEY NOT NULL,
+    db_added_timestamp BIGINT,
+    db_updated_timestamp BIGINT
+);
+
+CREATE TABLE app_configs (
+    spasm_event JSONB,
     db_key SERIAL PRIMARY KEY NOT NULL,
     db_added_timestamp BIGINT,
     db_updated_timestamp BIGINT
