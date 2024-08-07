@@ -18,6 +18,7 @@ sudo su - postgres
 psql
 CREATE USER dbuser WITH PASSWORD 'dbuser';
 CREATE DATABASE spasm_database WITH OWNER = dbuser;
+CREATE DATABASE spasm_database_test WITH OWNER = dbuser;
 exit
 exit
 ```

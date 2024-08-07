@@ -20,8 +20,12 @@ export async function createDatabase(
   databaseName: string,
   dbConfig = DB_CONFIG_DEFAULT_WITHOUT_DATABASE
 ) {
-  // Not using DB_CONFIG_DEFAULT because this
-  // client config doesn't have a database name yet.
+  // Not using DB_CONFIG_DEFAULT because for this
+  // client config we haven't yet created a new database.
+  // Thus, we will attempt to connect to an original database,
+  // which is usually called "postgres", but it can be changed
+  // in the env file.
+  const { user } = dbConfig
   const client = new Client(dbConfig)
   await client.connect();
 
@@ -47,6 +51,11 @@ export async function createDatabase(
     }
   } catch (error) {
     console.error('Error creating database:', error.stack);
+    console.log("================================")
+    console.error(`Note: this step can fail if your db user '${user}' doesn't have a permission to create a new database. In that case you can either manually create new main and test databases by executing an SQL command from 'database.sql' file, which should be located in the root folder, or you can grant your user a privilege to create new databases by connecting to your default database and running the following SQL command as a superuser:`);
+    console.log(`ALTER USER ${user} CREATEDB;`)
+    console.log("After your user is granted a privilege to create new databases, you can execute this script again.")
+    console.log("================================")
   } finally {
     client.end();
   }

@@ -7,6 +7,7 @@ const dbport = process.env.POSTGRES_PORT || 5432;
 const database = process.env.POSTGRES_DATABASE || "spasm_database";
 const password = process.env.POSTGRES_PASSWORD || "dbuser";
 const user = process.env.POSTGRES_USER || "dbuser";
+const databaseOriginalName = process.env.POSTGRES_ORIGINAL_DATABASE_NAME || "postgres";
 
 export const testDatabase = database
   ? database + "_test"
@@ -40,6 +41,7 @@ export const DB_CONFIG_DEFAULT = {
 export const DB_CONFIG_DEFAULT_WITHOUT_DATABASE = {
   user: user,
   password: password,
+  database: databaseOriginalName,
   host: host,
   port: dbport
 };
@@ -57,6 +59,7 @@ export const DB_CONFIG_TEST = {
 export const DB_CONFIG_TEST_WITHOUT_DATABASE = {
   user: user,
   password: password,
+  database: databaseOriginalName,
   host: host,
   port: dbport
 };

@@ -41,7 +41,7 @@ const saveEventIntoDb = async (
     await fetchEventWithSameSpasmIdFromDbV2(event, pool)
 
   if (eventWithSameSpasmidFromDb) {
-    console.log("An event with the same Spasm ID is already in V2 tables.")
+    // console.log("An event with the same Spasm ID is already in V2 tables.")
     return false
   }
 
