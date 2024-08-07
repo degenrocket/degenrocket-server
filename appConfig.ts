@@ -21,6 +21,11 @@ const moderators: string[] =
   typeof(process?.env?.MODERATORS) === "string"
   ? process?.env?.MODERATORS.toLowerCase().split(',')
   : [];
+const enableSpasmModule: boolean = process?.env?.ENABLE_SPASM_MODULE === 'true' ? true : false
+const enableSpasmSourcesUpdates: boolean = process?.env?.ENABLE_SPASM_SOURCES_UPDATES === 'true' ? true : false
+const ignoreWhitelistForActionPostInSpasmModule: boolean = process?.env?.IGNORE_WHITELIST_FOR_ACTION_POST_IN_SPASM_MODULE === 'false' ? false : true
+const ignoreWhitelistForActionReactInSpasmModule: boolean = process?.env?.IGNORE_WHITELIST_FOR_ACTION_REACT_IN_SPASM_MODULE === 'false' ? false : true
+const ignoreWhitelistForActionReplyInSpasmModule: boolean = process?.env?.IGNORE_WHITELIST_FOR_ACTION_REPLY_IN_SPASM_MODULE === 'false' ? false : true
 
 // Disabled by default
 const enableWhitelistForActionPost: boolean =
@@ -29,6 +34,12 @@ const whitelistedForActionPost: string[] =
   typeof(process?.env?.WHITELISTED_FOR_ACTION_POST) === 'string'
   ? process?.env?.WHITELISTED_FOR_ACTION_POST.toLowerCase().split(',')
   : [];
+
+// Filters
+const feedFiltersActivityHot: number =
+  Number(process?.env?.FEED_FILTERS_ACTIVITY_HOT) || 5;
+const feedFiltersActivityRising: number =
+  Number(process?.env?.FEED_FILTERS_ACTIVITY_RISING) || 3;
 
 export const env = {
   allowNewEventsWithoutSignature,
@@ -42,5 +53,12 @@ export const env = {
   enableModeration,
   moderators,
   enableWhitelistForActionPost,
-  whitelistedForActionPost
+  whitelistedForActionPost,
+  feedFiltersActivityHot,
+  feedFiltersActivityRising,
+  enableSpasmModule,
+  enableSpasmSourcesUpdates,
+  ignoreWhitelistForActionPostInSpasmModule,
+  ignoreWhitelistForActionReactInSpasmModule,
+  ignoreWhitelistForActionReplyInSpasmModule
 }

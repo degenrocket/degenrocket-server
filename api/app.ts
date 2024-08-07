@@ -12,10 +12,10 @@ import { fetchLatestComments } from "../helper/sql/fetchLatestComments";
 import { fetchFullIdsFromShortId } from "../helper/sql/fetchFullIdsFromShortId";
 import { submitAction } from "../helper/sql/submitAction";
 // import { fetchPostsFromRssSources } from "../helper/rss/fetchPostsFromRssSources";
-import { QueryFeedFilters, FeedFilters } from "../types/interfaces";
+import { QueryFeedFilters, FeedFilters, QueryFeedFiltersV2, FeedFiltersV2 } from "../types/interfaces";
 import { isObjectWithValues } from "../helper/utils/utils";
 import {submitSpasmEvent} from "../helper/sql/submitSpasmEvent";
-import {fetchAllSpasmEventsV2ByFilter} from "../helper/sql/sqlUtils";
+import {fetchAllSpasmEventsV2ByFilter, fetchSpasmEventV2ById} from "../helper/sql/sqlUtils";
 import {poolDefault} from "../db";
 
 dotenv.config();
@@ -39,6 +39,8 @@ app.use(express.json()) // => req.body
 //ROUTES//
 
 // get all posts
+// Examples:
+// "/api/posts?webType=web3&category=any&platform=false&source=false&activity=hot&keyword=false&ticker=false&limitWeb2=0&limitWeb3=10",
 app.get("/api/posts", async(req: Request, res: Response) => {
   // res.json([{id: 1, title: "Great"}])
   const q: QueryFeedFilters = req.query
@@ -59,19 +61,6 @@ app.get("/api/posts", async(req: Request, res: Response) => {
 
   try {
       const posts = await fetchAllPosts(filters)
-      setTimeout(() => { res.json(posts) }, 200)
-      // res.json(posts);
-  } catch (err) {
-    console.error(err);
-    res.json(err);
-  }
-})
-
-app.get("/api/events", async(req: Request, res: Response) => {
-  try {
-      const posts = await fetchAllSpasmEventsV2ByFilter(
-        {limitWeb3:30}, poolDefault, "spasm_events"
-      )
       setTimeout(() => { res.json(posts) }, 200)
       // res.json(posts);
   } catch (err) {
@@ -247,6 +236,83 @@ app.post("/api/submit/", async (req: Request, res: Response) => {
 //     }
 //   }
 // });
+
+// V2
+// Examples:
+// "/api/events?webType=web3&category=any&source=false&activity=hot&keyword=false&limit=30",
+app.get("/api/events", async(req: Request, res: Response) => {
+  const q: QueryFeedFiltersV2 = req.query
+  const filters: FeedFiltersV2 = {
+    webType: q.webType && q.webType !== 'false' ? q.webType : null,
+    category: q.category && q.category !== 'false' ? q.category : null,
+    source: q.source && q.source !== 'false' ? q.source : null,
+    activity: q.activity && q.activity !== 'false' ? q.activity : null,
+    keyword: q.keyword && q.keyword !== 'false' ? q.keyword : null,
+    limit: q.limit && q.limit !== 'false' ? q.limit : null,
+  }
+
+  // Show a few events if no query is passed
+  if (!isObjectWithValues(q)) { filters.limit = 25 }
+
+  try {
+      const posts = await fetchAllSpasmEventsV2ByFilter(
+        filters, poolDefault, "spasm_events"
+      )
+      setTimeout(() => { res.json(posts) }, 200)
+      // res.json(posts);
+  } catch (err) {
+    console.error(err);
+    res.json(err);
+  }
+})
+
+// Examples:
+// /api/events/search?p=abc123
+app.get("/api/events/:id", async(req: Request, res: Response) => {
+  // console.log('req.params.id in /api/events/:id is:', req.params.id)
+  // console.log('req.params in /api/events/:id is:', req.params)
+  // console.log('req.query in /api/events/:id is:', req.query)
+  // console.log('req in /api/events/:id is:', req)
+  // console.log('req.query.target in /api/events/:id is:', req.query.target)
+  try {
+    console.log('req.query.p in /api/events/:id is:', req.query.p)
+    if (req.query.p && (
+        typeof(req.query.p) === "string" ||
+        typeof(req.query.p) === "number"
+      )
+    ) {
+      const event = await fetchSpasmEventV2ById(req.query.p)
+      if (event) {
+        console.log('Event has been found for req.query.p:', req.query.p)
+        const setRes = () => res.json(event)
+        setTimeout(setRes, 300)
+        // res.json(post)
+        return;
+      }
+    }
+
+    console.log('Event has not been found for req.query.p:', req.query.p)
+
+    if (req.params.id && req.params.id !== 'search') {
+      const event = await fetchSpasmEventV2ById(req.params.id)
+      if (event) {
+        const setRes = () => res.json(event)
+        setTimeout(setRes, 300)
+        console.log('Event has been found for req.params.id:', req.params.id)
+        // res.json(post);
+        return
+      }
+    }
+
+    const setRes = () => res.json({ error: 'Event has not been found' })
+    setTimeout(setRes, 300)
+    // res.json({ error: 'post has not been found' })
+    return
+  } catch (err) {
+    console.error(err);
+    res.json(err);
+  }
+})
 
 let server;
 

@@ -5,11 +5,15 @@ import { SpasmSource, Post, IgnoreWhitelistFor, ConfigForSubmitSpasmEvent } from
 import { submitAction } from "../sql/submitAction";
 import {submitSpasmEvent} from '../sql/submitSpasmEvent';
 import {poolDefault} from '../../db';
+import {env} from "./../../appConfig"
 // SPASM module is disabled by default
-const enableSpasmModule: boolean = process.env.ENABLE_SPASM_MODULE === 'true' ? true : false
-const enableSpasmSourcesUpdates: boolean = process.env.ENABLE_SPASM_SOURCES_UPDATES === 'true' ? true : false
-const env = process?.env
-const ignoreWhitelistForActionPostInSpasmModule: boolean = env?.IGNORE_WHITELIST_FOR_ACTION_POST_IN_SPASM_MODULE === 'false' ? false : true
+const {
+  enableSpasmModule,
+  enableSpasmSourcesUpdates,
+  ignoreWhitelistForActionPostInSpasmModule,
+  ignoreWhitelistForActionReactInSpasmModule,
+  ignoreWhitelistForActionReplyInSpasmModule
+} = env
 
 // Override console.log for production
 if (process.env.NODE_ENV !== "dev") {
@@ -123,20 +127,17 @@ export const fetchPostsFromSpasmSources = async (frequency?: string) => {
         }
         await Promise.all(arrayOfPosts.map((post) => {
           // Submit V2
-          // TODO tbc add environment variables:
-          // - ignoreWhitelistForActionReactInSpasmModule
-          // - ignoreWhitelistForActionReplyInSpasmModule
-          // - ignoreWhitelistForActionModerateInSpasmModule
-          // - ignoreWhitelistForActionEditInSpasmModule
           const customConfig = new ConfigForSubmitSpasmEvent()
           if (ignoreWhitelistForActionPostInSpasmModule) {
             customConfig.whitelist.action.post.enabled = false
-            customConfig.whitelist.action.react.enabled = false
-            customConfig.whitelist.action.reply.enabled = false
-            submitSpasmEvent(post, poolDefault, customConfig)
-          } else {
-            submitSpasmEvent(post, poolDefault, customConfig)
           }
+          if (ignoreWhitelistForActionReactInSpasmModule) {
+            customConfig.whitelist.action.react.enabled = false
+          }
+          if (ignoreWhitelistForActionReplyInSpasmModule) {
+            customConfig.whitelist.action.reply.enabled = false
+          }
+          submitSpasmEvent(post, poolDefault, customConfig)
 
           // Submit V0/V1
           return submitAction(

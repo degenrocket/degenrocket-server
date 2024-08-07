@@ -1,19 +1,18 @@
-import path from 'path';
 import {
   SpasmEventDatabaseV2
 } from '../../../../types/interfaces';
 import {
   insertSpasmEventV2,
   incrementSpasmEventActionV2,
+  fetchEventWithSameSpasmIdFromDbV2,
 } from '../../../../helper/sql/sqlUtils';
 import { pool } from '../../../../db';
 const { spasm } = require('spasm.js');
 
-console.log("starting migration to v2")
-console.log("starting creating new database tables")
+console.log("starting data migration to V2 tables")
 
 const fetchAllWeb3Events = async () => {
-  const searchLimit = 8000
+  const searchLimit = 20000
   const searchQuery = `
     SELECT * FROM actions
     ORDER BY added_time DESC
@@ -23,7 +22,7 @@ const fetchAllWeb3Events = async () => {
 }
 
 const fetchAllWeb2Events = async () => {
-  const searchLimit = 8000
+  const searchLimit = 20000
   const searchQuery = `
     SELECT * FROM posts
     ORDER BY pubdate DESC
@@ -32,18 +31,42 @@ const fetchAllWeb2Events = async () => {
   return allEvents.rows
 }
 
+const idsOfEventsInsertedIntoDb: string[] = []
+
 const saveEventIntoDb = async (
   event: SpasmEventDatabaseV2
-) => {
+): Promise<boolean> => {
+  // Check if event is already in db
+  const eventWithSameSpasmidFromDb =
+    await fetchEventWithSameSpasmIdFromDbV2(event, pool)
+
+  if (eventWithSameSpasmidFromDb) {
+    console.log("An event with the same Spasm ID is already in V2 tables.")
+    return false
+  }
+
   const result = await insertSpasmEventV2(event)
-  return result
+
+  if (result) {
+    idsOfEventsInsertedIntoDb.push(spasm.extractSpasmId01)
+    return result
+  }
+
+  return false
 }
 
 const incrementStats = async (
   event: SpasmEventDatabaseV2
 ) => {
-  const result = await incrementSpasmEventActionV2(event)
-  return result
+  const spasmId = spasm.extractSpasmId01
+  
+  // Only increment if event was inserted during this migration
+  if (idsOfEventsInsertedIntoDb.includes(spasmId)) {
+    const result = await incrementSpasmEventActionV2(event)
+    return result
+  }
+
+  return false
 }
 
 const startMigration = async () => {
@@ -60,19 +83,11 @@ const startMigration = async () => {
       // notSavingEvents.push(postsWeb3[1010])
       // console.log("postsWeb3[1010]:", postsWeb3[1010])
 
-      const dbSpasmEventsDatabaseV2 = postsWeb2Web3.map((post) => {
-        // if (!spasm.convertToSpasmEventDatabase(post)) {
-        //   console.log("cannot covert this post:", post)
-        // }
-        return spasm.convertToSpasmEventDatabase(post)
-      })
-
       const resultsSave = await Promise.all(
-        dbSpasmEventsDatabaseV2.map((event) => {
+        postsWeb2Web3.map((event) => {
           return saveEventIntoDb(event)
         })
       )
-      console.log("resultsSave:", resultsSave)
 
       // Only web3 posts are used to increment stats
       const dbSpasmEventsV2 = postsWeb3.map((post) => {

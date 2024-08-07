@@ -75,7 +75,6 @@ BEGIN
     ) THEN
         -- JSONB stores JSON objects, arrays, nested arrays
         CREATE TABLE spasm_events (
-            -- TODO
             spasm_event JSONB,
             stats JSONB,
             shared_by JSONB,
@@ -165,4 +164,69 @@ BEGIN
             db_updated_timestamp BIGINT
         );
     END IF;
+
+-- -- -- --
+--  Indices
+
+--  Create indices
+--  Index the whole 'spasm_event' column:
+    --  CREATE INDEX spasm_events_event_idx ON spasm_events USING GIN (spasm_event);
+    --  Table: spasm_events
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes WHERE indexname = 'spasm_events_event_idx'
+    ) THEN
+        EXECUTE 'CREATE INDEX spasm_events_event_idx ON spasm_events USING GIN (spasm_event)';
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes WHERE indexname = 'spasm_events_stats_idx'
+    ) THEN
+        EXECUTE 'CREATE INDEX spasm_events_stats_idx ON spasm_events USING GIN (stats)';
+    END IF;
+
+    --  Table: spasm_users
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes WHERE indexname = 'spasm_users_user_idx'
+    ) THEN
+        EXECUTE 'CREATE INDEX spasm_users_user_idx ON spasm_users USING GIN (spasm_user)';
+    END IF;
+
+    --  Table: spasm_sources
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes WHERE indexname = 'spasm_sources_source_idx'
+    ) THEN
+        EXECUTE 'CREATE INDEX spasm_sources_source_idx ON spasm_sources USING GIN (spasm_source)';
+    END IF;
+
+    --  Table: rss_sources
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes WHERE indexname = 'rss_sources_source_idx'
+    ) THEN
+        EXECUTE 'CREATE INDEX rss_sources_source_idx ON rss_sources USING GIN (rss_source)';
+    END IF;
+
+    --  Table: extra_items
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes WHERE indexname = 'extra_items_item_idx'
+    ) THEN
+        EXECUTE 'CREATE INDEX extra_items_item_idx ON extra_items USING GIN (extra_item)';
+    END IF;
+
+    --  Table: admin_events
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes WHERE indexname = 'admin_events_event_idx'
+    ) THEN
+        EXECUTE 'CREATE INDEX admin_events_event_idx ON admin_events USING GIN (spasm_event)';
+    END IF;
+
+    --  Table: app_configs
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes WHERE indexname = 'app_configs_event_idx'
+    ) THEN
+        EXECUTE 'CREATE INDEX app_configs_event_idx ON app_configs USING GIN (spasm_event)';
+    END IF;
+
+--  Check indices
+    --  SELECT indexname FROM pg_indexes WHERE tablename = 'spasm_events';
+    --  SELECT pg_size_pretty(pg_indexes_size('spasm_events'));
+
 END $$;

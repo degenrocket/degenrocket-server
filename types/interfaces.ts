@@ -737,7 +737,28 @@ export interface KnownPostOrEventInfo {
 export type PrivateKeyType = "ethereum" | "nostr"
 
 ////////////////
-// Configs
+// Filters V2
+export interface FeedFiltersV2 {
+  webType?: FiltersWebType | null
+  category?: FiltersCategory | null
+  source?: string | null
+  activity?: FiltersActivity | null
+  keyword?: string | null
+  limit?: number | string
+}
+
+// Query is a string, so use "false" instead of boolean
+export interface QueryFeedFiltersV2 {
+  webType?: FiltersWebType | "false"
+  category?: FiltersCategory | "false"
+  source?: string | "false"
+  activity?: FiltersActivity | "false"
+  keyword?: string | "false"
+  limit?: number | string | "false"
+}
+
+////////////////
+// Configs V2
 export type CustomFunctionType = (...args: any[]) => any;
 
 export class ConfigForSubmitSpasmEvent {
@@ -762,7 +783,6 @@ export class ConfigForSubmitSpasmEvent {
       post: { enabled: boolean, list: string[] }
       react: { enabled: boolean, list: string[] }
       reply: { enabled: boolean, list: string[] }
-      moderate: { enabled: boolean, list: string[] }
     }
   }
   moderation: {
@@ -793,7 +813,6 @@ export class ConfigForSubmitSpasmEvent {
         },
         react: { enabled: false, list: [] },
         reply: { enabled: false, list: [] },
-        moderate: { enabled: false, list: [] }
       }
     },
     this.moderation = {

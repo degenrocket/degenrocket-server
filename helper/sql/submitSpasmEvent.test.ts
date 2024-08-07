@@ -51,7 +51,6 @@ const configEverythingDisabled: ConfigForSubmitSpasmEvent = {
       post: { enabled: false, list: [] },
       react: { enabled: false, list: [] },
       reply: { enabled: false, list: [] },
-      moderate: { enabled: false, list: [] }
     }
   },
   moderation: {

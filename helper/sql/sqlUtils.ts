@@ -6,7 +6,7 @@ import {
   SpasmEventV2,
   UnknownEventV2,
   SpasmEventStatV2,
-  FeedFilters
+  FeedFiltersV2
 } from "../../types/interfaces";
 import {
   hasValue,
@@ -15,6 +15,7 @@ import {
   toBeString,
   toBeTimestamp
 } from "../utils/utils";
+import { env } from "./../../appConfig";
 const DOMPurify = require('isomorphic-dompurify');
 const { spasm } = require('spasm.js');
 
@@ -164,6 +165,7 @@ export const fetchAllSpasmEventsV2ById = async (
   const dbTable = DOMPurify.sanitize(dirtyDbTable)
 
   try {
+      // EXPLAIN ANALYZE
     const res = await pool.query(`
       SELECT *
       FROM ${dbTable}
@@ -180,6 +182,10 @@ export const fetchAllSpasmEventsV2ById = async (
       ]
     );
 
+    // Log 'query plan' if using `EXPLAIN ANALYZE`
+    // in the query to check indices
+    // console.log("res:", res.rows)
+    
    /**
     * -> operator gets a JSON object field as JSON (or JSONB),
     * ->> operator gets a JSON object field as text
@@ -253,7 +259,7 @@ export const fetchAllSpasmEventsV2ByIds = async (
       [idsQueryObjects]
     );
     const spasmEvents: SpasmEventV2[] = []
-    
+
     if (res?.rows && Array.isArray(res.rows)) {
       res.rows.forEach((row: any) => {
         if (
@@ -1262,24 +1268,142 @@ export const incrementStatsV2ForThisEvent = async (
 }
 
 export const fetchAllSpasmEventsV2ByFilter = async (
-  // TODO
-  filters: FeedFilters,
+  filters: FeedFiltersV2,
   pool = poolDefault,
   dirtyDbTable = "spasm_events"
 ): Promise<SpasmEventV2 | null> => {
   console.log("filters:", filters)
   let limit = 20
-  if (typeof(filters.limitWeb3) === "number") {
-    limit = filters.limitWeb3
+  // spasm.sanitizeEvent() can sanitize any object/array
+  spasm.sanitizeEvent(filters)
+
+  if (
+    // Limit is a number
+    typeof(filters?.limit) === "number" &&
+    filters?.limit >= 0
+  ) {
+    limit = Number(filters.limit)
+  } else if (
+    // Limit is a string
+    typeof(filters?.limit) === "string" &&
+    Number(filters?.limit) >= 0
+  ) {
+    limit = Number(filters.limit)
+  } else if (
+    // Limit is not specified
+    !filters?.limit &&
+    typeof(filters?.limit) !== "number"
+  ) {
+    // Do nothing
   }
 
   try {
     const dbTable = DOMPurify.sanitize(dirtyDbTable)
-    const checkEvents = await pool.query(`
+    const params: any[] = [limit]
+    const conditions: string[] = []
+
+    if (filters?.category && (
+      typeof(filters?.category) === "string" ||
+      typeof(filters?.category) === "number"
+    )) {
+      const queryObjectForCategory = {
+        "categories": [ { "name": filters?.category } ]
+      }
+      params.push(queryObjectForCategory)
+      // Using ${params.length} instead of numbers like $1, $2
+      conditions.push(`
+        spasm_event @> $${params.length}::jsonb `)
+    }
+
+    if (filters?.source && (
+      typeof(filters?.source) === "string" ||
+      typeof(filters?.source) === "number"
+    )) {
+      const queryObjectForSource = {
+        "source": { "name": filters?.source }
+      }
+      params.push(queryObjectForSource)
+      // Using ${params.length} instead of numbers like $1, $2
+      conditions.push(`
+        spasm_event @> $${params.length}::jsonb `)
+    }
+
+    if (filters?.keyword && (
+      typeof(filters?.keyword) === "string" ||
+      typeof(filters?.keyword) === "number"
+    )) {
+      const queryArrayForKeyword = [
+        { "keywords": [ filters?.keyword ] },
+        { "keywords": [ filters?.keyword.toUpperCase() ] },
+        { "keywords": [ filters?.keyword.toLowerCase() ] }
+      ]
+      params.push(queryArrayForKeyword)
+      // Using ${params.length} instead of numbers like $1, $2
+      conditions.push(`
+        spasm_event @> ANY($${params.length}::jsonb[]) `)
+    }
+
+    // Activity filter (the amount of reactions)
+    let minimumReactTotal: number | null = null
+    if (filters?.activity === "hot") {
+      minimumReactTotal = env.feedFiltersActivityHot
+    } else if (filters?.activity === "rising") {
+      minimumReactTotal = env.feedFiltersActivityRising
+    }
+    if (minimumReactTotal) {
+      params.push(minimumReactTotal)
+      conditions.push(`
+        EXISTS (
+          SELECT 1
+          FROM jsonb_array_elements(spasm_events.stats) AS stat
+          WHERE stat->>'action' = 'react'
+          AND (stat->>'total')::integer > $${params.length}
+        )
+      `)
+    }
+
+    // webType is added at the end because it doesn't
+    // push any parameters
+    if (
+      filters?.webType && typeof(filters?.webType) === "string"
+    ) {
+      let sqlQueryHasSignature = `
+        EXISTS (
+          SELECT 1 FROM jsonb_array_elements(spasm_event->'signatures') AS signature
+          WHERE signature->>'value' IS NOT NULL AND signature->>'value' != ''
+        ) `
+
+      if (filters?.webType === "web3") {
+        conditions.push(sqlQueryHasSignature)
+      } else if (filters?.webType === "web2") {
+        conditions.push("NOT " + sqlQueryHasSignature)
+      } else if (filters?.webType === "all") {
+        // do nothing
+      }
+    }
+    
+    // Base query
+    // EXPLAIN ANALYZE
+    let sqlQuery = `
       SELECT *
-      FROM ${dbTable}
-      LIMIT $1
-    `, [limit])
+      FROM ${dbTable} `
+
+    // Params from filters
+    // if (params.length > 1) {
+    if (conditions.length > 0) {
+      sqlQuery += `
+      WHERE ${conditions.join(" AND ")} `
+    }
+
+    // Base limit
+    sqlQuery += `
+      LIMIT COALESCE($1, 20)
+    `
+
+    console.log("sqlQuery:", sqlQuery)
+    console.log("params:", params)
+
+    const checkEvents = await pool.query(sqlQuery, params)
 
     if (checkEvents.rows.length > 0) return checkEvents.rows
   } catch (err) {

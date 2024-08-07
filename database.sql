@@ -5,225 +5,235 @@
  * npm run initialize-db
  * 
  * Option 2.
- * - Create database (recommended name is "spasm_database")
+ * - Create two databases (recommended name is "spasm_database")
  *   CREATE DATABASE spasm_database;
+ *   CREATE DATABASE spasm_database_test;
  * - Create tables by manually executing the SQL code below: 
  */
 
 /* 
- * Note for RSS module only (unrelated to database).
- * The default timeout of rss-parser should be increased
- * when parsing many sources.
- * Open:
- * node_modules/rss-parser/lib/parser.js:15
- * Change 60000 (60 sec) to 120000 (120 sec) 
- * E.g.:
- * const DEFAULT_TIMEOUT = 120000;
+ * IF NOT EXISTS clause is not supported for creating tables
+ * directly, so we need to use a conditional check.
  */
 
-CREATE TABLE posts(
-id SERIAL NOT NULL,
-guid TEXT NOT NULL PRIMARY KEY,
-source TEXT,
-category TEXT,
-tickers TEXT,
-tags TEXT,
-title TEXT,
-url TEXT,
-description TEXT,
-pubdate TIMESTAMPTZ
-);
+DO $$
+BEGIN
+    -- V1
+    IF NOT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'posts'
+    ) THEN
+        CREATE TABLE posts (
+            id SERIAL NOT NULL,
+            guid TEXT NOT NULL PRIMARY KEY,
+            source TEXT,
+            category TEXT,
+            tickers TEXT,
+            tags TEXT,
+            title TEXT,
+            url TEXT,
+            description TEXT,
+            pubdate TIMESTAMPTZ
+        );
+    END IF;
+    IF NOT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'actions'
+    ) THEN
+        CREATE TABLE actions (
+            id SERIAL NOT NULL,
+            target TEXT NOT NULL,
+            action TEXT,
+            category TEXT,
+            tags TEXT,
+            tickers TEXT,
+            title TEXT,
+            text TEXT,
+            signer TEXT,
+            signed_message TEXT,
+            signature TEXT,
+            signed_time TIMESTAMPTZ,
+            added_time TIMESTAMPTZ
+        );
+    END IF;
+    IF NOT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'actions_count'
+    ) THEN
+        CREATE TABLE actions_count (
+            target text NOT NULL,
+            upvote integer,
+            downvote integer,
+            bullish integer,
+            bearish integer,
+            important integer,
+            scam integer,
+            comments_count integer,
+            latest_action_added_time TIMESTAMPTZ,
+            PRIMARY KEY (target)
+        );
+    END IF;
 
-/* table with proof of all actions */
-CREATE TABLE actions(
-id SERIAL NOT NULL,
-target TEXT NOT NULL,
-action TEXT,
-category TEXT,
-tags TEXT,
-tickers TEXT,
-title TEXT,
-text TEXT,
-signer TEXT,
-signed_message TEXT,
-signature TEXT,
-signed_time TIMESTAMPTZ,
-added_time TIMESTAMPTZ
-);
+    -- -- -- --
+    -- V2
+    IF NOT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'spasm_events'
+    ) THEN
+        -- JSONB stores JSON objects, arrays, nested arrays
+        CREATE TABLE spasm_events (
+            spasm_event JSONB,
+            stats JSONB,
+            shared_by JSONB,
+            db_key SERIAL PRIMARY KEY NOT NULL,
+            db_added_timestamp BIGINT,
+            db_updated_timestamp BIGINT
+            --  db_key SERIAL PRIMARY KEY,
+            --  version VARCHAR(255),
+            --  id TEXT,
+            --  timestamp BIGINT,
+            --  db_timestamp BIGINT,
+            --  links JSONB,
+            --  keywords TEXT[],
+            --  tags JSONB,
+            --  media JSONB,
+            --  references JSONB,
+            --  original_event_object JSONB,
+            --  original_event_string TEXT,
+            --  stats JSONB,
+            --  signature TEXT
+            --  meta JSONB,
+        );
+    END IF;
+    IF NOT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'spasm_users'
+    ) THEN
+        CREATE TABLE spasm_users (
+            spasm_user JSONB,
+            db_key SERIAL PRIMARY KEY NOT NULL,
+            db_added_timestamp BIGINT,
+            db_updated_timestamp BIGINT
+        );
+    END IF;
+    IF NOT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'spasm_sources'
+    ) THEN
+        CREATE TABLE spasm_sources (
+            spasm_source JSONB,
+            db_key SERIAL PRIMARY KEY NOT NULL,
+            db_added_timestamp BIGINT,
+            db_updated_timestamp BIGINT
+        );
+    END IF;
+    IF NOT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'rss_sources'
+    ) THEN
+        CREATE TABLE rss_sources (
+            rss_source JSONB,
+            db_key SERIAL PRIMARY KEY NOT NULL,
+            db_added_timestamp BIGINT,
+            db_updated_timestamp BIGINT
+        );
+    END IF;
+    IF NOT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'extra_items'
+    ) THEN
+        CREATE TABLE extra_items (
+            extra_item JSONB,
+            db_key SERIAL PRIMARY KEY NOT NULL,
+            db_added_timestamp BIGINT,
+            db_updated_timestamp BIGINT
+        );
+    END IF;
+    IF NOT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'admin_events'
+    ) THEN
+        CREATE TABLE admin_events (
+            spasm_event JSONB,
+            db_key SERIAL PRIMARY KEY NOT NULL,
+            db_added_timestamp BIGINT,
+            db_updated_timestamp BIGINT
+        );
+    END IF;
+    IF NOT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'app_configs'
+    ) THEN
+        CREATE TABLE app_configs (
+            spasm_event JSONB,
+            db_key SERIAL PRIMARY KEY NOT NULL,
+            db_added_timestamp BIGINT,
+            db_updated_timestamp BIGINT
+        );
+    END IF;
 
-/* table with counted actions for each target */
-CREATE TABLE public.actions_count (
-    target text NOT NULL,
-    upvote integer,
-    downvote integer,
-    bullish integer,
-    bearish integer,
-    important integer,
-    scam integer,
-    comments_count integer,
-    latest_action_added_time TIMESTAMPTZ,
-    PRIMARY KEY (target)
-);
+-- -- -- --
+--  Indices
 
-CREATE TABLE spasm_events (
-    spasm_event JSONB,
-    stats JSONB,
-    shared_by JSONB,
-    db_key SERIAL PRIMARY KEY NOT NULL,
-    db_added_timestamp BIGINT,
-    db_updated_timestamp BIGINT
-);
+--  Create indices
+--  Index the whole 'spasm_event' column:
+    --  CREATE INDEX spasm_events_event_idx ON spasm_events USING GIN (spasm_event);
+    --  Table: spasm_events
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes WHERE indexname = 'spasm_events_event_idx'
+    ) THEN
+        EXECUTE 'CREATE INDEX spasm_events_event_idx ON spasm_events USING GIN (spasm_event)';
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes WHERE indexname = 'spasm_events_stats_idx'
+    ) THEN
+        EXECUTE 'CREATE INDEX spasm_events_stats_idx ON spasm_events USING GIN (stats)';
+    END IF;
 
-CREATE TABLE spasm_users (
-    spasm_user JSONB,
-    db_key SERIAL PRIMARY KEY NOT NULL,
-    db_added_timestamp BIGINT,
-    db_updated_timestamp BIGINT
-);
+    --  Table: spasm_users
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes WHERE indexname = 'spasm_users_user_idx'
+    ) THEN
+        EXECUTE 'CREATE INDEX spasm_users_user_idx ON spasm_users USING GIN (spasm_user)';
+    END IF;
 
-CREATE TABLE spasm_sources (
-    spasm_source JSONB,
-    db_key SERIAL PRIMARY KEY NOT NULL,
-    db_added_timestamp BIGINT,
-    db_updated_timestamp BIGINT
-);
+    --  Table: spasm_sources
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes WHERE indexname = 'spasm_sources_source_idx'
+    ) THEN
+        EXECUTE 'CREATE INDEX spasm_sources_source_idx ON spasm_sources USING GIN (spasm_source)';
+    END IF;
 
-CREATE TABLE rss_sources (
-    rss_source JSONB,
-    db_key SERIAL PRIMARY KEY NOT NULL,
-    db_added_timestamp BIGINT,
-    db_updated_timestamp BIGINT
-);
+    --  Table: rss_sources
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes WHERE indexname = 'rss_sources_source_idx'
+    ) THEN
+        EXECUTE 'CREATE INDEX rss_sources_source_idx ON rss_sources USING GIN (rss_source)';
+    END IF;
 
-CREATE TABLE extra_items (
-    extra_item JSONB,
-    db_key SERIAL PRIMARY KEY NOT NULL,
-    db_added_timestamp BIGINT,
-    db_updated_timestamp BIGINT
-);
+    --  Table: extra_items
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes WHERE indexname = 'extra_items_item_idx'
+    ) THEN
+        EXECUTE 'CREATE INDEX extra_items_item_idx ON extra_items USING GIN (extra_item)';
+    END IF;
 
-CREATE TABLE admin_events (
-    spasm_event JSONB,
-    db_key SERIAL PRIMARY KEY NOT NULL,
-    db_added_timestamp BIGINT,
-    db_updated_timestamp BIGINT
-);
+    --  Table: admin_events
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes WHERE indexname = 'admin_events_event_idx'
+    ) THEN
+        EXECUTE 'CREATE INDEX admin_events_event_idx ON admin_events USING GIN (spasm_event)';
+    END IF;
 
-CREATE TABLE app_configs (
-    spasm_event JSONB,
-    db_key SERIAL PRIMARY KEY NOT NULL,
-    db_added_timestamp BIGINT,
-    db_updated_timestamp BIGINT
-);
+    --  Table: app_configs
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes WHERE indexname = 'app_configs_event_idx'
+    ) THEN
+        EXECUTE 'CREATE INDEX app_configs_event_idx ON app_configs USING GIN (spasm_event)';
+    END IF;
 
-/* Basic indexes */
---  CREATE INDEX idx_spasm_events_db_id ON spasm_events USING btree(db_id);
---  CREATE INDEX idx_spasm_events_spasm_id ON spasm_events USING btree(spasm_id);
---  CREATE INDEX idx_spasm_events_event_id ON spasm_events USING btree(event_id);
---  CREATE INDEX idx_spasm_events_root_event ON spasm_events USING btree(root_event);
---  CREATE INDEX idx_spasm_events_parent_event ON spasm_events USING btree(parent_event);
---  CREATE INDEX idx_spasm_events_timestamp ON spasm_events USING btree(timestamp);
---  CREATE INDEX idx_spasm_events_db_timestamp ON spasm_events USING btree(db_timestamp);
---  CREATE INDEX idx_spasm_events_author ON spasm_events USING btree(author);
---  CREATE INDEX idx_spasm_events_signature ON spasm_events USING btree(signature);
+--  Check indices
+    --  SELECT indexname FROM pg_indexes WHERE tablename = 'spasm_events';
+    --  SELECT pg_size_pretty(pg_indexes_size('spasm_events'));
 
-/* Advanced indexes */
---  CREATE INDEX idx_spasm_events_category ON spasm_events USING btree(category);
---  CREATE INDEX idx_spasm_events_links ON spasm_events USING gin(links);
---  CREATE INDEX idx_spasm_events_tags ON spasm_events USING gin(tags);
---  CREATE INDEX idx_spasm_events_media ON spasm_events USING gin(media);
---  CREATE INDEX idx_spasm_events_extra ON spasm_events USING gin(extra);
---  CREATE INDEX idx_spasm_events_original_event_object ON spasm_events USING gin(original_event_object);
---  CREATE INDEX idx_spasm_events_reactions ON spasm_events USING gin(reactions);
---  CREATE INDEX idx_spasm_events_comments ON spasm_events USING gin(comments);
-
-/* Indexes inside JSON objects */
---  CREATE INDEX idx_spasm_events_meta_previous_event ON spasm_events ((meta -> 'previousEvent'));
-
-/* table with roles and permissions for users */
---  CREATE TABLE IF NOT EXISTS users(
---  id SERIAL NOT NULL,
---  pubkey TEXT NOT NULL PRIMARY KEY,
---  admin integer,
---  moderator integer,
---  whitelist integer,
---  blacklist integer,
---  trust_level integer,
---  trust_score integer,
---  warning_level integer,
---  warning_score integer,
---  /*
---    Note: managing iframe tags via a database introduces
---    an additional attack vector since an adversary can
---    get an access to the database, give himself a permission
---    to embed iframe tags and then serve the malicious code
---    to users via iframe tags.
---    Thus, it's recommended to manage an allow list for iframe
---    tags via an environment file (.env) instead.
---    Only enable the line below 'allow_iframe integer,'
---    if you know what you're doing:
---  */
---  --  allow_iframe integer,
---  /*
---    Note: markdown should also be managed with caution.
---  */
---  -- allow_markdown integer,
---  allow_post integer,
---  allow_comment integer,
---  allow_react integer,
---  added_by TEXT,
---  added_time TIMESTAMPTZ,
---  last_change_by TEXT,
---  last_change_time TIMESTAMPTZ
---  );
-
-/*
-Signed reaction message structure:
-{
-  "version": "dmp_v0.1.0",
-  "time": "",
-  "action": "react",
-  "target": "",
-  "text": "",
-  "license": "SPDX-License-Identifier: CC0-1.0"
-}
-*/
-
-/*
-Signed comment message structure:
-{
-  "version": "dmp_v0.1.0",
-  "time": "",
-  "action": "reply",
-  "target": "",
-  "text": "",
-  "license": "SPDX-License-Identifier: CC0-1.0"
-}
-*/
-
-/*
-Signed post message structure:
-{
-  "version": "dmp_v0.1.0",
-  "time": "",
-  "action": "post",
-  "title": "",
-  "text": "",
-  "tags": "",
-  "license": "SPDX-License-Identifier: CC0-1.0"
-}
-*/
-
-/*
-Example of reaction:
-{
-  "version": "dmp_v0.1.0",
-  "time": "Fri, 4 Jun 2021 19:00",
-  "action": "react",
-  "target": "https://website.com/?p=12345",
-  "text": "Important",
-  "license": "SPDX-License-Identifier: CC0-1.0"
-}
-Short:
-{"version":"SM21","date":"Fri, 4 Jun 2021 19:00","action":"react","target":"https://website.com/?p=12345","message":"Important","license": "SPDX-License-Identifier: CC0-1.0"}
-*/
+END $$;

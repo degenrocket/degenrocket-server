@@ -1,12 +1,12 @@
 {
   "name": "degen-rocket-server",
-  "version": "1.15.0",
+  "version": "2.0.0-alpha",
   "license": "MIT",
-  "description": "",
+  "description": "Spasm-compatible server",
   "main": "index.js",
   "_commentsAboutScripts": {
     "jest": {
-      "runInBand": "Added to run tests sequentially to avoid parallel execution issues when working with the database."
+      "runInBand": "Added to run tests sequentially to avoid parallel execution issues when testing the database."
     }
   },
   "scripts": {
@@ -27,10 +27,7 @@
     "verify-db": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/info/verify-db.ts",
     "display-stats-db": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/info/display-stats-db.ts",
     "initialize-db": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/setup/initialize-db.ts",
-    "migrate": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/migrations/v2/00_migrateToV2.ts",
-    "migrate-01": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/migrations/v2/01_createDbTables.ts",
-    "migrate-02": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/migrations/v2/02_verifyDbTables.ts",
-    "migrate-03": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/migrations/v2/03_migrateData.ts"
+    "migrate": "cross-env NODE_ENV=dev TS_NODE=true NODE_OPTIONS=\"-r ts-node/register\" node db/scripts/migrations/v2/00_migrateToV2.ts"
   },
   "author": "",
   "private": "true",
