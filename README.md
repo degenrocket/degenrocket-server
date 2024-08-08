@@ -50,6 +50,16 @@ id SERIAL NOT NULL,
 
 Note: table `posts` is not necessary if you disable web2 posts. However, it's suggested to create table `posts` to avoid any errors.
 
+Alternatively, you can use scripts `npm run initialize-db` or `npm run migrate`, which will attempt to create new main and test databases, as well as all the necessary tables and indices.
+
+However, these scripts require a database user to have a privilege to create a new database. If your database user doesn't have that privilege, then you can grant it by executing the following SQL command from a superuser:
+
+```
+ALTER USER your_username CREATEDB;
+```
+
+Once your database user has a privilege to create new databases, you can run scripts `npm run initialize-db` or `npm run migrate` again.
+
 ### Tables
 
 Table `posts` contains web2 posts (not signed with any private key), usually fetched from RSS sources.
