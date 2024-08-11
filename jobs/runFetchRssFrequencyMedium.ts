@@ -1,4 +1,6 @@
 import { fetchPostsFromRssSources } from "../helper/rss/fetchPostsFromRssSources";
+import { env } from "./../appConfig"
+const { enableRssModule, enableRssSourcesUpdates } = env
 
 // Override console.log for production
 if (process.env.NODE_ENV !== "dev") {
@@ -7,4 +9,6 @@ if (process.env.NODE_ENV !== "dev") {
   console.warn = () => {}
 }
 
-fetchPostsFromRssSources("medium")
+if (enableRssModule && enableRssSourcesUpdates) {
+  fetchPostsFromRssSources("medium")
+}

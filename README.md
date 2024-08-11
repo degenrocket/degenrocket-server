@@ -38,7 +38,7 @@ POSTGRES_USER=dbuser
 
 To create all tables in a new database, execute the code from `database.sql`.
 
-Note: skip line `CREATE DATABASE spasm_database;` because we've already created a database in the step above.
+Note: skip lines `CREATE DATABASE spasm_database;` and `CREATE DATABASE spasm_database_test;` because we've already created databases in the step above.
 
 ```
 sudo su - postgres

@@ -18,8 +18,8 @@ export const getFeed = async (source) => {
   try {
     data = await parser.parseURL(source.url);
   } catch (err) {
-    console.error("error in getFeed function");
-    console.error(err);
+    console.error("error in getFeed function (error message is hidden)");
+    // console.error(err);
   }
 
   // adding custom source name and custom tickers to each item

@@ -104,7 +104,7 @@ export const fetchPostsFromRssSources = async (frequency) => {
         : false
     } catch (err) {
       // console.error('getData failed for source:', source, 'with error message:', err);
-      console.error('getData failed for source.url:', source.url, 'at time:', time, ', an error message is hidden to easier analyze error logs');
+      console.error('getData failed for source.url:', source.url, 'at', time, ', error message is hidden');
     }
   };
 

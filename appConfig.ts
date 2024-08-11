@@ -21,11 +21,17 @@ const moderators: string[] =
   typeof(process?.env?.MODERATORS) === "string"
   ? process?.env?.MODERATORS.toLowerCase().split(',')
   : [];
+
+// SPASM module is disabled by default
 const enableSpasmModule: boolean = process?.env?.ENABLE_SPASM_MODULE === 'true' ? true : false
 const enableSpasmSourcesUpdates: boolean = process?.env?.ENABLE_SPASM_SOURCES_UPDATES === 'true' ? true : false
 const ignoreWhitelistForActionPostInSpasmModule: boolean = process?.env?.IGNORE_WHITELIST_FOR_ACTION_POST_IN_SPASM_MODULE === 'false' ? false : true
 const ignoreWhitelistForActionReactInSpasmModule: boolean = process?.env?.IGNORE_WHITELIST_FOR_ACTION_REACT_IN_SPASM_MODULE === 'false' ? false : true
 const ignoreWhitelistForActionReplyInSpasmModule: boolean = process?.env?.IGNORE_WHITELIST_FOR_ACTION_REPLY_IN_SPASM_MODULE === 'false' ? false : true
+
+// RSS module is disabled by default
+const enableRssModule: boolean = process.env.ENABLE_RSS_MODULE === 'true' ? true : false
+const enableRssSourcesUpdates: boolean = process.env.ENABLE_RSS_SOURCES_UPDATES === 'true' ? true : false
 
 // Disabled by default
 const enableWhitelistForActionPost: boolean =
@@ -58,6 +64,8 @@ export const env = {
   feedFiltersActivityRising,
   enableSpasmModule,
   enableSpasmSourcesUpdates,
+  enableRssModule,
+  enableRssSourcesUpdates,
   ignoreWhitelistForActionPostInSpasmModule,
   ignoreWhitelistForActionReactInSpasmModule,
   ignoreWhitelistForActionReplyInSpasmModule
