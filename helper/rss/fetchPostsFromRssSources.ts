@@ -3,7 +3,7 @@ import { stripFeedItem } from "./stripFeedItem";
 import { pool, poolDefault } from "../../db";
 import fs from 'fs';
 import path from 'path';
-import {SpasmEventV0} from "../../types/interfaces";
+import {ConfigForSubmitSpasmEvent, SpasmEventV0} from "../../types/interfaces";
 import {submitSpasmEvent} from "../sql/submitSpasmEvent";
 // RSS module is disabled by default
 const enableRssModule = process.env.ENABLE_RSS_MODULE === 'true' ? true : false
@@ -76,6 +76,8 @@ export const fetchPostsFromRssSources = async (frequency) => {
         // Submit V0/V1 to 'posts' table
         await Promise.all(data.items.map(filterData))
         // Submit V2 to 'spasm_events' table
+        const customConfig = new ConfigForSubmitSpasmEvent()
+        customConfig.whitelist.action.post.enabled = false
         await Promise.all(data.items.map((item) => {
           const post: SpasmEventV0 = {}
           if (item.guid) { post.guid = item.guid }
@@ -89,7 +91,7 @@ export const fetchPostsFromRssSources = async (frequency) => {
             post.description = item.contentSnippet
           }
 
-          submitSpasmEvent(post, poolDefault)
+          submitSpasmEvent(post, poolDefault, customConfig)
         }))
       } else {
         console.log("data for filterData is null")
