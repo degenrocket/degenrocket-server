@@ -72,13 +72,19 @@ export const fetchPostsFromRssSources = async (frequency) => {
       data ? data.items.forEach(strip) : console.log("data is null");
       // data ? data.items.forEach(filterData) : console.log("data is null");
 
-      if (data) {
-        // Submit V0/V1 to 'posts' table
-        await Promise.all(data.items.map(filterData))
-        // Submit V2 to 'spasm_events' table
+
+      if (data && data.items && Array.isArray(data.items)) {
+
+        // config to ignore whitelist for V2 events
         const customConfig = new ConfigForSubmitSpasmEvent()
         customConfig.whitelist.action.post.enabled = false
-        await Promise.all(data.items.map((item) => {
+
+        // Execute sequentially one by one
+        for (const item of data.items) {
+          // Submit V0/V1 to 'posts' table
+          await filterData(item)
+
+          // Submit V2 to 'spasm_events' table
           const post: SpasmEventV0 = {}
           if (item.guid) { post.guid = item.guid }
           if (item.source) { post.source = item.source }
@@ -90,9 +96,8 @@ export const fetchPostsFromRssSources = async (frequency) => {
           if (item.contentSnippet) {
             post.description = item.contentSnippet
           }
-
           submitSpasmEvent(post, poolDefault, customConfig)
-        }))
+        }
       } else {
         console.log("data for filterData is null")
       }

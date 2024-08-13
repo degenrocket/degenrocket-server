@@ -481,7 +481,7 @@ export const fetchAllEventsWithSameIdFromDbV2 = async (
       DOMPurify.sanitize(toBeString(dirtyIdFormatVersion))
     const spasmEventV2: SpasmEventV2 =
       spasm.toBeSpasmEventV2(unknownEvent)
-    if (!spasmEventV2) return []
+    if (!spasmEventV2) return null
 
     const id = spasm.extractIdByFormat(
       spasmEventV2, {

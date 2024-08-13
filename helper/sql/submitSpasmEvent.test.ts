@@ -19,6 +19,7 @@ import {
   validDmpReplySignedClosed,
   validNostrSpasmModerateEvent,
   validPostWithRssItem,
+  validRssItemWithEmoji,
 } from "../_tests/_events-data";
 import {
   cleanDbTable,
@@ -732,6 +733,14 @@ describe("many tests for submitSpasmEvent with web2 posts", () => {
     ).toStrictEqual("Success. The event was saved into database")
     expect(await howManyEntriesInTable("spasm_events", poolTest)
     ).toStrictEqual(1)
+
+    expect(await submitSpasmEvent(
+      validRssItemWithEmoji,
+      poolTest,
+      customConfig)
+    ).toStrictEqual("Success. The event was saved into database")
+    expect(await howManyEntriesInTable("spasm_events", poolTest)
+    ).toStrictEqual(2)
 
     // Clean up db table after testing.
     expect(await cleanDbTable("spasm_events", poolTest)

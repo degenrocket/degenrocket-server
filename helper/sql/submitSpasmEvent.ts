@@ -189,7 +189,7 @@ export const submitSpasmEvent = async (
     const eventWithSameSpasmidFromDb =
       await fetchEventWithSameSpasmIdFromDbV2(spasmEvent, pool)
 
-    if (eventWithSameSpasmidFromDb) {
+    if (!!eventWithSameSpasmidFromDb) {
       return "An event with the same Spasm ID is already in database."
       // TODO
       // if all signatures in both events are the same, return
