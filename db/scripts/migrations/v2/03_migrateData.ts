@@ -164,7 +164,16 @@ const findTotalIdsWeb2 = async () => {
     ORDER BY id DESC
     LIMIT 1`
   const totalIds = await pool.query(searchQuery);
-  return totalIds.rows[0].id
+  if (
+    totalIds &&
+    Array.isArray(totalIds.rows) &&
+    totalIds?.rows?.[0] &&
+    totalIds?.rows?.[0].id
+  ) {
+    return totalIds.rows[0].id
+  } else {
+    return 0
+  }
 }
 
 const findTotalIdsWeb3 = async () => {
@@ -173,7 +182,16 @@ const findTotalIdsWeb3 = async () => {
     ORDER BY id DESC
     LIMIT 1`
   const totalIds = await pool.query(searchQuery);
-  return totalIds.rows[0].id
+  if (
+    totalIds &&
+    Array.isArray(totalIds.rows) &&
+    totalIds?.rows?.[0] &&
+    totalIds?.rows?.[0].id
+  ) {
+    return totalIds.rows[0].id
+  } else {
+    return 0
+  }
 }
 
 const startMigration = async () => {
