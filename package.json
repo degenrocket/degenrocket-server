@@ -1,6 +1,6 @@
 {
   "name": "degen-rocket-server",
-  "version": "2.0.0-alpha",
+  "version": "2.0.0-beta",
   "license": "MIT",
   "description": "Spasm-compatible server",
   "main": "index.js",
