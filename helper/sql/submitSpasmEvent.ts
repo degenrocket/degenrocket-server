@@ -17,7 +17,8 @@ import {
   isEventBanned,
   isReactionDuplicate,
   deleteSpasmEventsV2FromDbByIds,
-  incrementSpasmEventActionV2
+  incrementSpasmEventActionV2,
+  fetchEventWithSameUrlIdFromDbV2
 } from "./sqlUtils";
 const { spasm } = require('spasm.js');
 
@@ -186,10 +187,26 @@ export const submitSpasmEvent = async (
     // before the insertion but the actual incrementation of
     // stats is done after the insertion to avoid wrong
     // incrementation if insertion has failed.
-    const eventWithSameSpasmidFromDb =
-      await fetchEventWithSameSpasmIdFromDbV2(spasmEvent, pool)
+    let isEventAlreadyInDb: boolean = false
 
-    if (!!eventWithSameSpasmidFromDb) {
+    // web3 events are checked against Spasm ID
+    if (
+      spasm.hasSignatureNostr(spasmEvent) ||
+      spasm.hasSignatureEthereum(spasmEvent)
+    ) {
+      isEventAlreadyInDb = !!(
+        await fetchEventWithSameSpasmIdFromDbV2(spasmEvent, pool)
+      )
+    // web2 events without signatures are checked against URL ID
+    // because Spasm ID might be different e.g. if an RSS item
+    // has a slightly different value in pubdate or other fields.
+    } else {
+      isEventAlreadyInDb = !!(
+        await fetchEventWithSameUrlIdFromDbV2(spasmEvent, pool)
+      )
+    }
+
+    if (isEventAlreadyInDb) {
       return "An event with the same Spasm ID is already in database."
       // TODO
       // if all signatures in both events are the same, return
