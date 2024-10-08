@@ -1,6 +1,9 @@
 import {
   ConfigForSubmitSpasmEvent,
   CustomConfigForSubmitSpasmEvent,
+  SpasmEventEnvelopeV2,
+  SpasmEventEnvelopeWithTreeV2,
+  SpasmEventV2,
   UnknownEventV2
 } from "../../types/interfaces";
 
@@ -65,6 +68,24 @@ export const hasValue = (el?: any) => {
   return true
 }
 
+export const deepCopyOfObject = (obj: any) => {
+  if (!obj || typeof(obj) !== "object") return {}
+  return JSON.parse(JSON.stringify(obj))
+}
+
+export const copyOf = deepCopyOfObject
+
+export const isStringOrNumber = (val: any): boolean => {
+  if (!val && val !== 0) return false
+  if (typeof(val) === "string") return true
+  if (typeof(val) === "number") return true
+  return false
+}
+
+export const isNumberOrString = isStringOrNumber
+export const ifStringOrNumber = isStringOrNumber
+export const ifNumberOrString = isStringOrNumber
+
 export const isObjectWithValues = (val: any): boolean => {
   if (!val) return false
   if (Array.isArray(val)) return false
@@ -72,6 +93,37 @@ export const isObjectWithValues = (val: any): boolean => {
   if (Object.keys(val).length === 0) return false
 
   return true
+}
+
+export const isArrayWithValues = (array: any): boolean => {
+  if (!array) return false
+  if (!Array.isArray(array)) return false
+  if (!hasValue(array)) return false
+  return true
+}
+
+export const isArrayOfStrings = (array: any): boolean => {
+  if (!Array.isArray(array)) return false
+  if (
+    array.length > 0 &&
+    array.every(element => typeof(element) === "string")
+  ) {
+    return true
+  }
+  return false
+}
+
+export const isArrayOfStringsWithValues = (array: any): boolean => {
+  if (!Array.isArray(array)) return false
+  if (!hasValue(array)) return false
+  if (
+    array.length > 0 &&
+    array.every(element => typeof(element) === "string") &&
+    array.every(element => hasValue(element))
+  ) {
+    return true
+  }
+  return false
 }
 
 export const toBeString = (input: any): string => {
@@ -149,7 +201,8 @@ export const removeTrailingWhitespaceFromEachLine = (
 }
 
 // Get rid of multiple spaces without regex
-export const reduceMultipleSpaces = (str) => {
+export const reduceMultipleSpaces = (str: string) => {
+  if (!str || typeof(str) !== "string") { return '' }
     let result = '';
     let inSpace = false;
 
@@ -248,6 +301,136 @@ export const getCommonValuesInArrays = (
   })
   return commonValues
 }
+
+export const withoutDb = (
+  unknownEvent: SpasmEventV2 | SpasmEventEnvelopeV2 | SpasmEventEnvelopeWithTreeV2,
+  depth: number = 0,
+  maxDepth: number = 50
+): SpasmEventV2 | SpasmEventEnvelopeV2 | SpasmEventEnvelopeWithTreeV2 | null => {
+  // Maximum recursion depth to prevent stack overflow
+  if (
+    typeof(depth) !== "number" ||
+    typeof(maxDepth) !== "number"
+  ) { return unknownEvent }
+  const maxRecursionDepth = maxDepth ?? 50
+  if (depth >= maxRecursionDepth) {
+    return unknownEvent
+  }
+
+  if (!unknownEvent || !isObjectWithValues(unknownEvent)) {
+    return null
+  }
+  let event: SpasmEventV2 | SpasmEventEnvelopeV2 | SpasmEventEnvelopeWithTreeV2 =
+    copyOf(unknownEvent)
+  if (!event) { return null }
+
+  if (event.db) {
+    const { db, ...rest } = event
+    event = rest
+  }
+  // if (event.stats) {
+  //   const { stats, ...rest } = event
+  //   event = rest
+  // }
+
+  if (
+    "children" in event && event.children &&
+    Array.isArray(event.children)
+  ) {
+    event.children.forEach((child, index) => {
+      if (
+        child.event && isObjectWithValues(child.event) &&
+        "children" in event && event.children &&
+        Array.isArray(event.children)
+      ) {
+        event.children[index] = withoutDb(
+          child.event, depth + 1
+        )
+      }
+    })
+  }
+  return event
+}
+
+export const withoutStats = (
+  unknownEvent: SpasmEventV2 | SpasmEventEnvelopeV2 | SpasmEventEnvelopeWithTreeV2,
+  depth: number = 0,
+  maxDepth: number = 50
+): SpasmEventV2 | SpasmEventEnvelopeV2 | SpasmEventEnvelopeWithTreeV2 | null => {
+  // Maximum recursion depth to prevent stack overflow
+  if (
+    typeof(depth) !== "number" ||
+    typeof(maxDepth) !== "number"
+  ) { return unknownEvent }
+  const maxRecursionDepth = maxDepth ?? 50
+  if (depth >= maxRecursionDepth) {
+    return unknownEvent
+  }
+
+  if (!unknownEvent || !isObjectWithValues(unknownEvent)) {
+    return null
+  }
+  let event: SpasmEventV2 | SpasmEventEnvelopeV2 | SpasmEventEnvelopeWithTreeV2 =
+    copyOf(unknownEvent)
+  if (!event) { return null }
+
+  // if (event.db) {
+  //   const { db, ...rest } = event
+  //   event = rest
+  // }
+  if (event.stats) {
+    const { stats, ...rest } = event
+    event = rest
+  }
+
+  if (
+    "children" in event && event.children &&
+    Array.isArray(event.children)
+  ) {
+    event.children.forEach((child, index) => {
+      if (
+        child.event && isObjectWithValues(child.event) &&
+        "children" in event && event.children &&
+        Array.isArray(event.children)
+      ) {
+        event.children[index] = withoutDb(
+          child.event, depth + 1
+        )
+      }
+    })
+  }
+  return event
+}
+
+export const withoutDbStats = (
+  unknownEvent: SpasmEventV2 | SpasmEventEnvelopeV2 | SpasmEventEnvelopeWithTreeV2,
+  depth: number = 0,
+  maxDepth: number = 50
+): SpasmEventV2 | SpasmEventEnvelopeV2 | SpasmEventEnvelopeWithTreeV2 | null => {
+  // Maximum recursion depth to prevent stack overflow
+  if (
+    typeof(depth) !== "number" ||
+    typeof(maxDepth) !== "number"
+  ) { return unknownEvent }
+  const maxRecursionDepth = maxDepth ?? 50
+  if (depth >= maxRecursionDepth) {
+    return unknownEvent
+  }
+
+  if (!unknownEvent || !isObjectWithValues(unknownEvent)) {
+    return null
+  }
+  let event: SpasmEventV2 | SpasmEventEnvelopeV2 | SpasmEventEnvelopeWithTreeV2 =
+    copyOf(unknownEvent)
+  if (!event) { return null }
+
+  event = withoutDb(event)
+  event = withoutStats(event)
+
+  return event
+}
+
+export const copyWithoutDbStats = withoutDbStats
 
 export const mergeObjects = (
   defaultObject: Object,

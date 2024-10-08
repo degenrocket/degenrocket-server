@@ -12,11 +12,27 @@ import { fetchLatestComments } from "../helper/sql/fetchLatestComments";
 import { fetchFullIdsFromShortId } from "../helper/sql/fetchFullIdsFromShortId";
 import { submitAction } from "../helper/sql/submitAction";
 // import { fetchPostsFromRssSources } from "../helper/rss/fetchPostsFromRssSources";
-import { QueryFeedFilters, FeedFilters, QueryFeedFiltersV2, FeedFiltersV2 } from "../types/interfaces";
-import { isObjectWithValues } from "../helper/utils/utils";
+import { QueryFeedFilters, FeedFilters, QueryFeedFiltersV2, FeedFiltersV2, SpasmEventEnvelopeV2, SpasmEventV2 } from "../types/interfaces";
+import {
+  isArrayWithValues, isObjectWithValues,
+  isStringOrNumber, isValidUrl
+} from "../helper/utils/utils";
 import {submitSpasmEvent} from "../helper/sql/submitSpasmEvent";
-import {fetchAllSpasmEventsV2ByFilter, fetchSpasmEventV2ById} from "../helper/sql/sqlUtils";
+import {
+  buildTreeDown,
+  fetchAllSpasmEventsV2ByFilter,
+  fetchSpasmEventV2ById,
+  fetchSpasmEventV2ByShortId,
+  fetchAllSpasmEventsV2BySigner
+} from "../helper/sql/sqlUtils";
 import {poolDefault} from "../db";
+import { env } from "./../appConfig";
+const {
+  enableShortUrlsForWeb3Actions,
+  shortUrlsLengthOfWeb3Ids,
+} = env
+
+const { spasm } = require('spasm.js');
 
 dotenv.config();
 
@@ -181,9 +197,26 @@ app.get("/api/targets/comments/:id", async(req: Request, res: Response) => {
 // Fetch all actions an author submitted
 app.get("/api/authors/:id", async(req: Request, res: Response) => {
   try {
-    const posts = await fetchPostsByAuthor(req.params.id)
-    setTimeout(() => { res.json(posts) }, 300)
-    // res.json(posts);
+    if (
+      req?.params?.id && typeof (req?.params?.id) === "string"
+    ) {
+      const spasmEvents = await fetchAllSpasmEventsV2BySigner(
+        req.params.id, poolDefault, "spasm_events"
+      )
+      if (isArrayWithValues(spasmEvents)) {
+        const spasmEventEnvelopes: SpasmEventEnvelopeV2[] =
+          spasm.convertManyToSpasmEventEnvelope(spasmEvents)
+
+        // Convert all SpasmEvent to SpasmEventEnvelope
+        if (isArrayWithValues(spasmEventEnvelopes)) {
+          setTimeout(() => {res.json(spasmEventEnvelopes)}, 200)
+        } else {
+          setTimeout(() => {res.json(null)}, 200)
+        }
+      } else {
+        setTimeout(() => {res.json(null)}, 200)
+      }
+    }
   } catch (err) {
     console.error(err);
     res.json(err);
@@ -244,6 +277,7 @@ app.get("/api/events", async(req: Request, res: Response) => {
   const q: QueryFeedFiltersV2 = req.query
   const filters: FeedFiltersV2 = {
     webType: q.webType && q.webType !== 'false' ? q.webType : null,
+    action: q.action && q.action !== 'false' ? q.action : null,
     category: q.category && q.category !== 'false' ? q.category : null,
     source: q.source && q.source !== 'false' ? q.source : null,
     activity: q.activity && q.activity !== 'false' ? q.activity : null,
@@ -255,11 +289,23 @@ app.get("/api/events", async(req: Request, res: Response) => {
   if (!isObjectWithValues(q)) { filters.limit = 25 }
 
   try {
-      const posts = await fetchAllSpasmEventsV2ByFilter(
+      const spasmEvents = await fetchAllSpasmEventsV2ByFilter(
         filters, poolDefault, "spasm_events"
       )
-      setTimeout(() => { res.json(posts) }, 200)
-      // res.json(posts);
+
+      // Convert all SpasmEvent to SpasmEventEnvelope
+      if (isArrayWithValues(spasmEvents)) {
+        const spasmEventEnvelopes: SpasmEventEnvelopeV2[] =
+          spasm.convertManyToSpasmEventEnvelope(spasmEvents)
+
+        if (isArrayWithValues(spasmEventEnvelopes)) {
+          setTimeout(() => {res.json(spasmEventEnvelopes)}, 200)
+        } else {
+          setTimeout(() => {res.json(null)}, 200)
+        }
+      } else {
+        setTimeout(() => {res.json(null)}, 200)
+      }
   } catch (err) {
     console.error(err);
     res.json(err);
@@ -267,7 +313,7 @@ app.get("/api/events", async(req: Request, res: Response) => {
 })
 
 // Examples:
-// /api/events/search?p=abc123
+// /api/events/search?e=abc123
 app.get("/api/events/:id", async(req: Request, res: Response) => {
   // console.log('req.params.id in /api/events/:id is:', req.params.id)
   // console.log('req.params in /api/events/:id is:', req.params)
@@ -275,32 +321,69 @@ app.get("/api/events/:id", async(req: Request, res: Response) => {
   // console.log('req in /api/events/:id is:', req)
   // console.log('req.query.target in /api/events/:id is:', req.query.target)
   try {
-    console.log('req.query.p in /api/events/:id is:', req.query.p)
-    if (req.query.p && (
-        typeof(req.query.p) === "string" ||
-        typeof(req.query.p) === "number"
+    let id: (string | number) | null = null
+    if (req.query.e && (
+        typeof(req.query.e) === "string" ||
+        typeof(req.query.e) === "number"
       )
     ) {
-      const event = await fetchSpasmEventV2ById(req.query.p)
-      if (event) {
-        console.log('Event has been found for req.query.p:', req.query.p)
-        const setRes = () => res.json(event)
-        setTimeout(setRes, 300)
-        // res.json(post)
-        return;
-      }
+      id = String(req.query.e)
+    } else if (
+      req.params.id && req.params.id !== 'search'
+    ) {
+      id = String(req.params.id)
     }
 
-    console.log('Event has not been found for req.query.p:', req.query.p)
+    if (id && isStringOrNumber(id)) {
+      let event: SpasmEventV2 | null = null
+      if (
+        enableShortUrlsForWeb3Actions &&
+        String(id).length === shortUrlsLengthOfWeb3Ids &&
+        !isValidUrl(id)
+      ) {
+        event = await fetchSpasmEventV2ByShortId(id)
+      } else {
+        event = await fetchSpasmEventV2ById(id)
+      }
 
-    if (req.params.id && req.params.id !== 'search') {
-      const event = await fetchSpasmEventV2ById(req.params.id)
-      if (event) {
-        const setRes = () => res.json(event)
-        setTimeout(setRes, 300)
-        console.log('Event has been found for req.params.id:', req.params.id)
-        // res.json(post);
-        return
+      if (
+        typeof(Number(req.query.commentsDepth)) === "number" &&
+        Number(req.query.commentsDepth) > 0
+      ) {
+        const maxDepth: number = Number(req.query.commentsDepth)
+        const eventWithTree =
+          await buildTreeDown(event, poolDefault, maxDepth)
+        if (eventWithTree && isObjectWithValues(eventWithTree)) {
+          const spasmEventEnvelopeWithTree: SpasmEventEnvelopeV2 =
+            spasm.convertToSpasmEventEnvelopeWithTree(eventWithTree)
+          if (
+            spasmEventEnvelopeWithTree &&
+            isObjectWithValues(spasmEventEnvelopeWithTree)
+          ) {
+            const setRes = () => res.json(spasmEventEnvelopeWithTree)
+            setTimeout(setRes, 300)
+          } else {
+            const setRes = () => res.json(null)
+            setTimeout(setRes, 300)
+          }
+          return;
+        }
+      } else {
+        if (event && isObjectWithValues(event)) {
+          const spasmEventEnvelope: SpasmEventEnvelopeV2 =
+            spasm.convertToSpasmEventEnvelope(event)
+          if (
+            spasmEventEnvelope &&
+            isObjectWithValues(spasmEventEnvelope)
+          ) {
+            const setRes = () => res.json(spasmEventEnvelope)
+            setTimeout(setRes, 300)
+          } else {
+            const setRes = () => res.json(null)
+            setTimeout(setRes, 300)
+          }
+          return;
+        }
       }
     }
 

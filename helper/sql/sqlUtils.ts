@@ -10,7 +10,9 @@ import {
 } from "../../types/interfaces";
 import {
   hasValue,
+  isArrayWithValues,
   isObjectWithValues,
+  isStringOrNumber,
   removeDuplicatesFromArray,
   toBeString,
   toBeTimestamp
@@ -147,7 +149,6 @@ export const joinDbInfo = (
   return spasmEvent
 }
 
-// TODO convert SpasmEventDatabaseV2 to Envelope
 export const fetchAllSpasmEventsV2ById = async (
   dirtyId: string | number,
   pool = poolDefault,
@@ -226,6 +227,86 @@ export const fetchAllSpasmEventsV2ById = async (
   }
 }
 
+export const fetchAllSpasmEventsV2ByShortId = async (
+  dirtyId: string | number,
+  pool = poolDefault,
+  dirtyDbTable = "spasm_events"
+): Promise<SpasmEventV2[] | null> => {
+  if (
+    !dirtyId ||
+    (
+      typeof(dirtyId) !== "string" &&
+      typeof(dirtyId) !== "number"
+    )
+  ) return null
+
+  const id = DOMPurify.sanitize(toBeString(dirtyId))
+  const dbTable = DOMPurify.sanitize(dirtyDbTable)
+
+  // Extra safeguard against collision attacks
+  if (id.length < 15) { return null }
+
+  try {
+    // Log 'query plan' if using `EXPLAIN ANALYZE`
+    // in the query to check indices
+    // console.log("res:", res.rows)
+    
+    // EXPLAIN ANALYZE
+    const res = await pool.query(`
+      SELECT *
+      FROM ${dbTable}
+      WHERE EXISTS (
+          SELECT 1
+          FROM jsonb_array_elements(spasm_event->'ids') AS id_object
+          WHERE id_object->>'value' LIKE $1
+      )
+    `, [id+'%']);
+
+    const spasmEvents: SpasmEventV2[] = []
+    
+    if (res?.rows && Array.isArray(res.rows)) {
+      res.rows.forEach((row: any) => {
+        if (
+          row && typeof(row) === "object" &&
+          'spasm_event' in row &&
+          row.spasm_event &&
+          typeof(row.spasm_event) === "object"
+        ) {
+          const spasmEvent: SpasmEventV2 = joinDbInfo(
+            row, dbTable
+          )
+          spasmEvent.type = "SpasmEventV2"
+          spasmEvents.push(spasmEvent)
+        }
+      })
+    }
+    return spasmEvents
+  } catch (err) {
+    console.error(err);
+    return null
+  }
+}
+
+export const fetchSpasmEventV2ByShortId = async (
+  dirtyId: string | number,
+  pool = poolDefault,
+  dirtyDbTable = "spasm_events"
+): Promise<SpasmEventV2 | null> => {
+  const events = await fetchAllSpasmEventsV2ByShortId(
+    dirtyId,
+    pool,
+    dirtyDbTable
+  )
+  if (
+    events && Array.isArray(events) &&
+    events[0] && isObjectWithValues(events[0])
+  ) {
+    return events[0]
+  } else {
+    return null
+  }
+}
+
 export const fetchAllSpasmEventsV2ByIds = async (
   dirtyIds: (string | number)[],
   pool = poolDefault,
@@ -236,6 +317,7 @@ export const fetchAllSpasmEventsV2ByIds = async (
   spasm.sanitizeEvent(dirtyIds)
   const ids = removeDuplicatesFromArray(dirtyIds)
   const dbTable = DOMPurify.sanitize(dirtyDbTable)
+  if (!ids || !dbTable) { return null }
 
   const idsQueryObjects = ids.map(id => {
     if (
@@ -303,34 +385,28 @@ export const fetchSpasmEventV2ById = async (
   }
 }
 
-// TODO ByParentIds (copy from ByIds)
 export const fetchAllSpasmEventsV2ByParentId = async (
-  dirtyParentId: string,
+  dirtyParentId: (string | number),
   pool = poolDefault,
+  dirtyAction: string | number = "any",
   dirtyDbTable = "spasm_events"
 ): Promise<SpasmEventV2[] | null> => {
   if (
-    !dirtyParentId ||
-    (
-      typeof(dirtyParentId) !== "string" &&
-      typeof(dirtyParentId) !== "number"
-    )
+    !dirtyParentId || !pool || !dirtyAction ||
+    !isStringOrNumber(dirtyParentId)
   ) {
     return null
   }
 
   const parentId = DOMPurify.sanitize(toBeString(dirtyParentId))
+  const action = DOMPurify.sanitize(dirtyAction)
   const dbTable = DOMPurify.sanitize(dirtyDbTable)
+  if (!parentId || !action || !dbTable) { return null }
 
   try {
-    // Works
-    const res = await pool.query(`
-      SELECT *
-      FROM ${dbTable}
-      WHERE spasm_event @> $1::jsonb
-      `,
-      [
-        // $1 parentId
+    let queryArray = null
+    if (action && action === "any") {
+      queryArray = [
         {
           "parent": {
             "ids": [
@@ -341,6 +417,32 @@ export const fetchAllSpasmEventsV2ByParentId = async (
           }
         }
       ]
+    } else if (
+      action &&
+      typeof(action) === "string" &&
+      action !== "any"
+    ) {
+      queryArray = [
+        {
+          "action": action,
+          "parent": {
+            "ids": [
+              {
+                "value": parentId
+              }
+            ]
+          }
+        }
+      ]
+    }
+
+    if (!queryArray) return null
+
+    const res = await pool.query(`
+      SELECT *
+      FROM ${dbTable}
+      WHERE spasm_event @> $1::jsonb
+      `, queryArray
     )
 
     const spasmEvents: SpasmEventV2[] = []
@@ -371,6 +473,344 @@ export const fetchAllSpasmEventsV2ByParentId = async (
 export const fetchAllSpasmEventsV2ByTarget =
   fetchAllSpasmEventsV2ByParentId
 
+export const fetchAllChildrenByParentId =
+  fetchAllSpasmEventsV2ByParentId
+
+export const fetchAllChildrenByTarget =
+  fetchAllSpasmEventsV2ByParentId
+
+export const fetchAllCommentsByParentId = async (
+  dirtyParentId: (string | number),
+  pool = poolDefault,
+  dirtyDbTable = "spasm_events"
+): Promise<SpasmEventV2[] | null> => {
+  return fetchAllSpasmEventsV2ByParentId(
+    dirtyParentId, pool, "reply", dirtyDbTable
+  )
+}
+
+export const fetchCommentsByParentId =
+  fetchAllCommentsByParentId
+
+export const fetchAllReactionsByParentId = async (
+  dirtyParentId: (string | number),
+  pool = poolDefault,
+  dirtyDbTable = "spasm_events"
+): Promise<SpasmEventV2[] | null> => {
+  return fetchAllSpasmEventsV2ByParentId(
+    dirtyParentId, pool, "react", dirtyDbTable
+  )
+}
+
+export const fetchReactionsByParentId =
+  fetchAllReactionsByParentId
+
+export const fetchAllModerationsByParentId = async (
+  dirtyParentId: (string | number),
+  pool = poolDefault,
+  dirtyDbTable = "spasm_events"
+): Promise<SpasmEventV2[] | null> => {
+  return fetchAllSpasmEventsV2ByParentId(
+    dirtyParentId, pool, "moderate", dirtyDbTable
+  )
+}
+
+export const fetchModerationsByParentId =
+  fetchAllModerationsByParentId
+
+export const fetchAllSpasmEventsV2ByParentIds = async (
+  dirtyParentIds: (string | number)[],
+  pool = poolDefault,
+  dirtyAction: string | number = "any",
+  dirtyDbTable = "spasm_events",
+): Promise<SpasmEventV2[] | null> => {
+  if (
+    !dirtyParentIds || !isArrayWithValues(dirtyParentIds) ||
+    !pool || !dirtyAction || !dirtyDbTable
+  ) return null
+  // spasm.sanitizeEvent() can also sanitize an array
+  spasm.sanitizeEvent(dirtyParentIds)
+  const parentIds = removeDuplicatesFromArray(dirtyParentIds)
+  const action = DOMPurify.sanitize(dirtyAction)
+  const dbTable = DOMPurify.sanitize(dirtyDbTable)
+  if (
+    !parentIds || !isArrayWithValues(parentIds) ||
+    !action || !dbTable
+  ) { return null }
+
+  const parentIdsQueryObjects = parentIds.map(parentId => {
+    if (
+      parentId && (
+        typeof(parentId) === "string" ||
+        typeof(parentId) === "number"
+      )
+    ) {
+      if (action && action === "any") {
+        return {
+          "parent": {
+            "ids": [
+              {
+                "value": parentId
+              }
+            ]
+          }
+        }
+      } else if (
+        action &&
+        typeof(action) === "string" &&
+        action !== "any"
+      ) {
+        return {
+          "action": action,
+          "parent": {
+            "ids": [
+              {
+                "value": parentId
+              }
+            ]
+          }
+        }
+      }
+    }
+  })
+  try {
+    const res = await pool.query(`
+      SELECT *
+      FROM ${dbTable}
+      WHERE spasm_event @> ANY($1::jsonb[])
+      `,
+      [parentIdsQueryObjects]
+    );
+    const spasmEvents: SpasmEventV2[] = []
+
+    if (res?.rows && Array.isArray(res.rows)) {
+      res.rows.forEach((row: any) => {
+        if (
+          row && typeof(row) === "object" &&
+          'spasm_event' in row &&
+          row.spasm_event &&
+          typeof(row.spasm_event) === "object"
+        ) {
+          const spasmEvent: SpasmEventV2 = joinDbInfo(
+            row, dbTable
+          )
+          spasmEvent.type = "SpasmEventV2"
+          spasmEvents.push(spasmEvent)
+        }
+      })
+    }
+    return spasmEvents
+  } catch (err) {
+    console.error(err);
+    return null
+  }
+}
+
+export const fetchAllSpasmEventsV2ByTargets =
+  fetchAllSpasmEventsV2ByParentIds
+
+export const fetchAllChildrenByTargets =
+  fetchAllSpasmEventsV2ByParentIds
+
+export const fetchAllChildrenByParentIds =
+  fetchAllSpasmEventsV2ByParentIds
+
+export const fetchAllCommentsByParentIds = async (
+  dirtyParentIds: (string | number)[],
+  pool = poolDefault,
+  dirtyDbTable = "spasm_events",
+): Promise<SpasmEventV2[] | null> => {
+  return fetchAllSpasmEventsV2ByParentIds(
+    dirtyParentIds, pool, "reply", dirtyDbTable
+  )
+}
+
+export const fetchCommentsByParentIds =
+  fetchAllCommentsByParentIds
+
+export const fetchAllReactionsByParentIds = async (
+  dirtyParentIds: (string | number)[],
+  pool = poolDefault,
+  dirtyDbTable = "spasm_events",
+): Promise<SpasmEventV2[] | null> => {
+  return fetchAllSpasmEventsV2ByParentIds(
+    dirtyParentIds, pool, "react", dirtyDbTable
+  )
+}
+
+export const fetchReactionsByParentIds =
+  fetchAllReactionsByParentIds
+
+export const fetchAllModerationsByParentIds = async (
+  dirtyParentIds: (string | number)[],
+  pool = poolDefault,
+  dirtyDbTable = "spasm_events",
+): Promise<SpasmEventV2[] | null> => {
+  return fetchAllSpasmEventsV2ByParentIds(
+    dirtyParentIds, pool, "moderate", dirtyDbTable
+  )
+}
+
+export const fetchModerationsByParentIds =
+  fetchAllModerationsByParentIds
+
+export const fetchAllChildrenOfEvent = async (
+  unknownEvent: UnknownEventV2,
+  pool = poolDefault,
+  dirtyAction: string | number = "any",
+  dirtyDbTable = "spasm_events"
+): Promise<SpasmEventV2[] | null> => {
+  if (
+    !unknownEvent || !pool ||
+    !dirtyAction || !dirtyDbTable
+  ) return null
+
+  const action = DOMPurify.sanitize(dirtyAction)
+  const dbTable = DOMPurify.sanitize(toBeString(dirtyDbTable))
+  const spasmEventV2: SpasmEventV2 =
+    spasm.toBeSpasmEventV2(unknownEvent)
+  if (!spasmEventV2 || !action || !dbTable) return null
+
+  const eventIds: (string | number)[] | null =
+    spasm.getAllEventIds(spasmEventV2)
+  if (!eventIds) return null
+
+  const fetchedChildren = await fetchAllSpasmEventsV2ByParentIds(
+    eventIds, pool, action, dbTable
+  )
+  if (fetchedChildren) {
+    return fetchedChildren
+  } else {
+    return null
+  }
+}
+
+export const fetchAndAddAllChildrenToEvent = async (
+  unknownEvent: UnknownEventV2,
+  pool = poolDefault,
+  dirtyAction: string | number = "any",
+  depth = 0,
+  maxDepth = 10,
+  dirtyDbTable = "spasm_events"
+): Promise<SpasmEventV2 | null> => {
+  if (
+    !unknownEvent || !pool ||
+    !dirtyAction || !dirtyDbTable
+  ) return null
+
+  const spasmEventV2: SpasmEventV2 =
+    spasm.toBeSpasmEventV2(unknownEvent)
+  if (!spasmEventV2) return null
+
+  const action = DOMPurify.sanitize(dirtyAction)
+  const dbTable = DOMPurify.sanitize(toBeString(dirtyDbTable))
+  if (!action || !dbTable) return spasmEventV2
+
+  // Maximum recursion depth to prevent stack overflow
+  if (
+    typeof(depth) !== "number" ||
+    typeof(maxDepth) !== "number"
+  ) { return spasmEventV2 }
+  const maxRecursionDepth = maxDepth ?? 10
+  if (depth >= maxRecursionDepth) {
+    return spasmEventV2
+  }
+
+  const fetchedChildren = await fetchAllChildrenOfEvent(
+    spasmEventV2, pool, action, dirtyDbTable
+  )
+
+  if (
+    !fetchedChildren || !isArrayWithValues(fetchedChildren)
+  ) { return spasmEventV2 }
+
+  const eventWithAddedChildren: SpasmEventV2 | null =
+    spasm.addEventsToTree(spasmEventV2, fetchedChildren)
+
+  if (eventWithAddedChildren) {
+    return eventWithAddedChildren
+  } else { return null }
+}
+
+export const fetchAndAddCommentsToEvent = async (
+  unknownEvent: UnknownEventV2,
+  pool = poolDefault,
+  depth = 0,
+  maxDepth = 10,
+  dirtyDbTable = "spasm_events"
+): Promise<SpasmEventV2 | null> => {
+  return await fetchAndAddAllChildrenToEvent(
+    unknownEvent, pool, "reply", depth, maxDepth, dirtyDbTable
+  )
+}
+
+export const fetchAndAddCommentsRecursively = async (
+  unknownEvent: UnknownEventV2,
+  pool = poolDefault,
+  depth = 0,
+  maxDepth = 10,
+  dirtyDbTable = "spasm_events"
+): Promise<SpasmEventV2 | null> => {
+  const eventWithComments: SpasmEventV2 | null =
+    await fetchAndAddAllChildrenToEvent(
+    unknownEvent, pool, "reply", depth, maxDepth, dirtyDbTable
+  )
+  if (!eventWithComments) return null
+
+  // Maximum recursion depth to prevent stack overflow
+  if (
+    typeof(depth) !== "number" ||
+    typeof(maxDepth) !== "number"
+  ) { return eventWithComments }
+  const maxRecursionDepth = maxDepth ?? 10
+  if (depth >= maxRecursionDepth) {
+    return eventWithComments
+  }
+  // Limit max custom depth to maximum of 20
+  if (maxDepth > 20) { maxDepth = 20 }
+  
+  if (
+    !("children" in eventWithComments) ||
+    !eventWithComments.children ||
+    !isArrayWithValues(eventWithComments.children) ||
+    !eventWithComments.children.length
+  ) { return eventWithComments }
+  
+  for (let i = 0; i < eventWithComments.children.length; i++) {
+    if (eventWithComments.children[i]?.event) {
+      const childEventWithComments: SpasmEventV2 | null =
+        await fetchAndAddCommentsRecursively(
+        eventWithComments.children[i].event,
+        pool, depth + 1, maxDepth, dirtyDbTable
+      )
+      if (
+        childEventWithComments &&
+        isObjectWithValues(childEventWithComments)
+      ) {
+        eventWithComments.children[i].event =
+          childEventWithComments
+      }
+    }
+  }
+  if (
+    eventWithComments &&
+    isObjectWithValues(eventWithComments)
+  ) {
+    return eventWithComments
+  } else { return null }
+}
+
+export const buildTreeDown = async (
+  unknownEvent: UnknownEventV2,
+  pool = poolDefault,
+  maxDepth = 10,
+  dirtyDbTable = "spasm_events"
+): Promise<SpasmEventV2 | null> => {
+  return await fetchAndAddCommentsRecursively(
+    unknownEvent, pool, 0, maxDepth, dirtyDbTable
+  )
+}
+
 export const fetchAllSpasmEventsV2BySigner = async (
   dirtySigner: string,
   pool = poolDefault,
@@ -391,6 +831,7 @@ export const fetchAllSpasmEventsV2BySigner = async (
       WHERE spasm_event @> $1::jsonb
       `,
       [
+        // TODO add filter by action
         // $1 signer
         {
           "authors": [
@@ -764,12 +1205,14 @@ export const deleteSpasmEventsV2FromDbByIds = async (
   pool = poolDefault,
   dirtyDbTable = "spasm_events"
 ): Promise<boolean | null> => {
-  if (!dirtyIds || !Array.isArray(dirtyIds)) return null
-
+  if (!dirtyIds || !isArrayWithValues(dirtyIds)) return null
   // sanitizeEvent() can also sanitize an array
   spasm.sanitizeEvent(dirtyIds)
+  if (!dirtyIds || !isArrayWithValues(dirtyIds)) return null
   const ids = removeDuplicatesFromArray(dirtyIds)
+  if (!ids || !isArrayWithValues(ids)) return null
   const dbTable = DOMPurify.sanitize(dirtyDbTable)
+  if (!dbTable) return null
 
   const idsQueryObjects = ids.map(id => (
     {
@@ -1287,7 +1730,7 @@ export const fetchAllSpasmEventsV2ByFilter = async (
   filters: FeedFiltersV2,
   pool = poolDefault,
   dirtyDbTable = "spasm_events"
-): Promise<SpasmEventV2 | null> => {
+): Promise<SpasmEventV2[] | null> => {
   console.log("filters:", filters)
   let limit = 20
   // spasm.sanitizeEvent() can sanitize any object/array
@@ -1318,14 +1761,31 @@ export const fetchAllSpasmEventsV2ByFilter = async (
     const params: any[] = [limit]
     const conditions: string[] = []
 
-    if (filters?.category && (
-      typeof(filters?.category) === "string" ||
-      typeof(filters?.category) === "number"
-    )) {
+    if (
+      filters?.category &&
+      (
+        typeof(filters?.category) === "string" ||
+        typeof(filters?.category) === "number"
+      ) &&
+      filters?.category !== "any"
+    ) {
       const queryObjectForCategory = {
         "categories": [ { "name": filters?.category } ]
       }
       params.push(queryObjectForCategory)
+      // Using ${params.length} instead of numbers like $1, $2
+      conditions.push(`
+        spasm_event @> $${params.length}::jsonb `)
+    }
+
+    if (filters?.action && (
+      typeof(filters?.action) === "string" ||
+      typeof(filters?.action) === "number"
+    )) {
+      const queryObjectForAction = {
+        "action": filters?.action
+      }
+      params.push(queryObjectForAction)
       // Using ${params.length} instead of numbers like $1, $2
       conditions.push(`
         spasm_event @> $${params.length}::jsonb `)
@@ -1411,6 +1871,11 @@ export const fetchAllSpasmEventsV2ByFilter = async (
       WHERE ${conditions.join(" AND ")} `
     }
 
+    // Order
+    sqlQuery += `
+      ORDER BY db_added_timestamp DESC
+    `
+
     // Base limit
     sqlQuery += `
       LIMIT COALESCE($1, 20)
@@ -1419,12 +1884,89 @@ export const fetchAllSpasmEventsV2ByFilter = async (
     console.log("sqlQuery:", sqlQuery)
     console.log("params:", params)
 
-    const checkEvents = await pool.query(sqlQuery, params)
+    const events = await pool.query(sqlQuery, params)
 
-    if (checkEvents.rows.length > 0) return checkEvents.rows
+    // if (events.rows.length > 0) return events.rows
+
+    const spasmEvents: SpasmEventV2[] = []
+    
+    if (events?.rows && Array.isArray(events.rows)) {
+      events.rows.forEach((row: any) => {
+        if (
+          row && typeof(row) === "object" &&
+          'spasm_event' in row &&
+          row.spasm_event &&
+          typeof(row.spasm_event) === "object"
+        ) {
+          const spasmEvent: SpasmEventV2 = joinDbInfo(
+            row, dbTable
+          )
+          spasmEvent.type = "SpasmEventV2"
+          spasmEvents.push(spasmEvent)
+        }
+      })
+    }
+
+    if (
+      spasmEvents && Array.isArray(spasmEvents) &&
+      hasValue(spasmEvents)
+    ) {
+      return spasmEvents
+    } else {
+      return null
+    }
   } catch (err) {
     console.error(err);
   }
 
   return null
 }
+
+// export const fetchFullEventIdsFromShortId = async (
+//   dirtyId
+// ): SpasmEventV2[] => {
+//   if (!env.enableShortUrlsForWeb3Actions) return []
+//
+//   const id = DOMPurify.sanitize(dirtyId)
+//   if (typeof(id) !== "string") { return []}
+//   // Exit if ID length is short to minimize DDoS attacks
+//   if (id.length < 15) { return []}
+//
+//   try {
+//     let data
+//     let postsTable, idColumn, author, date
+//
+//     // web3
+//     postsTable = 'actions'
+//     idColumn = 'signature'
+//     author = 'signer'
+//     date = 'added_time'
+//
+//     data = await fetchFullIds(postsTable, idColumn, author, date, id)
+//
+//     return data
+//   } catch (err) {
+//     console.error('fetchFullIds failed:', err.message);
+//   }
+// }
+//
+// // 'id' is passed in a parameterized query to prevent SQL injections
+// const fetchFullIds = async (postsTable, idColumn, author, date, id) => {
+//   // '%' is added to match all values that start with id
+//   const idLike = id + '%'
+//   try {
+//     // It's important to exclude ${actionsCountTable}.target column from SELECT
+//     // because otherwise it will overwrite ${postsTable}.target column
+//     // Another solution is to rename ${actionsCountTable}.target column in db
+//     const fullIds = await pool.query(`
+//       SELECT ${idColumn}, ${author}, ${date}
+//       FROM ${postsTable}
+//       WHERE ${idColumn} LIKE $1
+//       ORDER BY ${date} ASC
+//       LIMIT 30`
+//     , [idLike] );
+//     return fullIds.rows
+//   } catch (err) {
+//     console.error(err);
+//   }
+// }

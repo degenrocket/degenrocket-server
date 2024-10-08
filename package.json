@@ -15,6 +15,7 @@
     "build": "rm -rf dist && npx tsc",
     "start": "nodemon dist/api/index.js",
     "test": "npm run build && cross-env NODE_ENV=dev jest --testTimeout=5000 --silent=false --verbose=false --forceExit --runInBand",
+    "test-dev": "npm run build && cross-env NODE_ENV=dev jest ./helper/_tests/_dev.test.ts --testTimeout=5000 --silent=false --verbose=false --forceExit --runInBand",
     "test-utils": "npm run build && cross-env NODE_ENV=dev jest ./helper/utils/utils.test.ts --testTimeout=5000 --silent=false --verbose=false --forceExit --runInBand",
     "test-sqlutils": "npm run build && cross-env NODE_ENV=dev jest ./helper/sql/sqlUtils.test.ts --testTimeout=5000 --silent=false --verbose=false --forceExit --runInBand",
     "test-current": "npm run build && cross-env NODE_ENV=dev jest ./helper/sql/submitSpasmEvent.test.ts --testTimeout=5000 --silent=false --verbose=false --forceExit --runInBand",

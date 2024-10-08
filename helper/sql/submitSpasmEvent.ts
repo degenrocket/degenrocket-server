@@ -221,7 +221,7 @@ export const submitSpasmEvent = async (
 
     const isToBeIncrementedLater =
       !(await isReactionDuplicate(spasmEvent, pool))
-    console.log('isToBeIncrementedLater:', isToBeIncrementedLater)
+    // console.log('isToBeIncrementedLater:', isToBeIncrementedLater)
 
     // const time = new Date(Date.now()).toISOString();
 
@@ -281,12 +281,12 @@ export const submitSpasmEvent = async (
 
       if (!insertSuccess) return "ERROR: event was not saved into database"
 
-      console.log("Action was unique, time to increment it now")
+      // console.log("Action was unique, time to increment it now")
       const incrementSuccess = await incrementSpasmEventActionV2(
         spasmEvent, pool
       )
 
-      console.log("++++++++++++++++++++++++++++++++++++++++++++")
+      // console.log("++++++++++++++++++++++++++++++++++++++++++++")
       return incrementSuccess
         ? "Success. Action has been saved and incremented"
         : "Action has been saved, but count was not incremented"

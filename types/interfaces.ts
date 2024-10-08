@@ -740,6 +740,7 @@ export type PrivateKeyType = "ethereum" | "nostr"
 // Filters V2
 export interface FeedFiltersV2 {
   webType?: FiltersWebType | null
+  action?: string | number | null
   category?: FiltersCategory | null
   source?: string | null
   activity?: FiltersActivity | null
@@ -750,6 +751,7 @@ export interface FeedFiltersV2 {
 // Query is a string, so use "false" instead of boolean
 export interface QueryFeedFiltersV2 {
   webType?: FiltersWebType | "false"
+  action?: string | number | "false"
   category?: FiltersCategory | "false"
   source?: string | "false"
   activity?: FiltersActivity | "false"
@@ -1051,7 +1053,7 @@ export interface SpasmEventV2 extends
     'type' | 'protocol' | 'authors' | 'parent' | 'root' | 'hosts' | 'links' | 'references' | 'sequence' | 'previousEvent'>,
   // Omit<SpasmEventEnvelopeV2, 'type'>,
   Omit<SpasmEventEnvelopeWithTreeV2,
-    'type' | 'protocol' | 'authors' | 'parent' | 'root' | 'hosts' | 'links' | 'references' | 'sequence' | 'previousEvent'> {
+    'type' | 'protocol' | 'authors' | 'parent' | 'root' | 'hosts' | 'links' | 'references' | 'sequence' | 'previousEvent' | 'children'> {
   type: "SpasmEventV2"
   /**
    * Protocol, sequence, previousEvent shouldn't be a part
@@ -1068,6 +1070,7 @@ export interface SpasmEventV2 extends
   references?: SpasmEventReferenceV2[]
   // Some events don't have signatures (e.g. RSS posts, URLs)
   signatures?: SpasmEventSignatureV2[]
+  children?: SpasmEventChildV2[]
 }
 
 export interface SpasmEventDatabaseV2 extends
@@ -1299,6 +1302,11 @@ export interface SpasmEventEnvelopeWithTreeChildV2 {
   marker?: string | number
   event?: SpasmEventEnvelopeWithTreeChildEventV2
   depth?: number
+}
+
+export interface SpasmEventChildV2 extends
+  SpasmEventEnvelopeWithTreeChildV2 {
+    event?: SpasmEventV2
 }
 
 // Using partial because SpasmEvent might not have reference.event

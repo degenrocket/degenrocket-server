@@ -22,6 +22,12 @@ const moderators: string[] =
   ? process?.env?.MODERATORS.toLowerCase().split(',')
   : [];
 
+// Short IDs
+const enableShortUrlsForWeb3Actions =
+  process?.env.ENABLE_SHORT_URLS_FOR_WEB3_ACTIONS === 'false' ? false : true;
+const shortUrlsLengthOfWeb3Ids: number =
+  Number(process?.env?.SHORT_URLS_LENGTH_OF_WEB3_IDS) || 20;
+
 // SPASM module is disabled by default
 const enableSpasmModule: boolean = process?.env?.ENABLE_SPASM_MODULE === 'true' ? true : false
 const enableSpasmSourcesUpdates: boolean = process?.env?.ENABLE_SPASM_SOURCES_UPDATES === 'true' ? true : false
@@ -58,6 +64,8 @@ export const env = {
   enableNewEthereumActionsAll,
   enableModeration,
   moderators,
+  enableShortUrlsForWeb3Actions,
+  shortUrlsLengthOfWeb3Ids,
   enableWhitelistForActionPost,
   whitelistedForActionPost,
   feedFiltersActivityHot,

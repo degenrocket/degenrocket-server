@@ -1,6 +1,7 @@
 import {
   howManyEntriesInTable
 } from '../../db/dbUtils';
+import {copyOf, copyWithoutDbStats, isObjectWithValues, withoutDbStats} from '../utils/utils';
 import {
   moderateDeleteValidDmpReply,
   moderateDeleteValidDmpReplyConvertedToSpasmEventV2,
@@ -15,6 +16,7 @@ import {
   validDmpReactionDownvoteSignedClosedDuplicate,
   validDmpReactionUpvote,
   validDmpReactionUpvoteDiffParentSignedClosed,
+  // validDmpReactionUpvoteDiffParentSignedClosedConvertedToSpasmEventV2,
   validDmpReactionUpvoteDiffSignerSignedClosed,
   validDmpReactionUpvoteDiffSignerSignedClosedConvertedToSpasmEventV2,
   validDmpReactionUpvoteSignedClosed,
@@ -25,7 +27,23 @@ import {
   validDmpReplyDiffSignerSignedClosed,
   validDmpReplySignedClosed,
   validDmpReplySignedClosedDuplicate,
-  validSpasmEventRssItemV0ConvertedToSpasmV2
+  validSpasmEventRssItemV0ConvertedToSpasmV2,
+  validDmpReply,
+  validPostWithNostrReplyToDmpEventConvertedToSpasmV2,
+  validSpasmWithDmpReplyToDmpEventV0ConvertedToSpasmEventV2,
+  validDmpEventSignedClosedConvertedToSpasmV2WithTwoChildren,
+  childOfGenesisDepth1Branch1Author1ReplySpasmEventV2,
+  childOfGenesisDepth2Branch1Author2ReplySpasmEventV2,
+  childOfGenesisDepth3Branch1Author1ReplySpasmEventV2,
+  childOfGenesisDepth4Branch1Author2ReplySpasmEventV2,
+  childOfGenesisDepth5Branch1Author1ReplySpasmEventV2,
+  childOfGenesisDepth6Branch1Author2ReplySpasmEventV2,
+  childOfGenesisDepth7Branch1Author1ReplySpasmEventV2,
+  childOfGenesisDepth8Branch1Author2ReplySpasmEventV2,
+  childOfGenesisDepth9Branch1Author1ReplySpasmEventV2,
+  childOfGenesisDepth10Branch1Author2ReplySpasmEventV2,
+  childOfGenesisDepth11Branch1Author1ReplySpasmEventV2,
+  childOfGenesisDepth12Branch1Author2ReplySpasmEventV2
 } from '../_tests/_events-data';
 import {
   poolTest,
@@ -36,13 +54,26 @@ import {
   deleteSpasmEventV2FromDbById,
   fetchAllSpasmEventsV2ByIds,
   fetchAllSpasmEventsV2ByParentId,
+  fetchAllSpasmEventsV2ByParentIds,
   fetchAllSpasmEventsV2BySigner,
   fetchEventWithSameSpasmIdFromDbV2,
   fetchSpasmEventV2ById,
+  fetchAllSpasmEventsV2ByShortId,
   incrementSpasmEventActionV2,
   insertSpasmEventV2,
   isEventBanned,
-  isReactionDuplicate
+  isReactionDuplicate,
+  fetchSpasmEventV2ByShortId,
+  fetchCommentsByParentId,
+  fetchAllReactionsByParentId,
+  fetchAllCommentsByParentId,
+  fetchAllReactionsByParentIds,
+  fetchCommentsByParentIds,
+  fetchAllModerationsByParentIds,
+  fetchAllModerationsByParentId,
+  fetchAndAddCommentsToEvent,
+  fetchAndAddCommentsRecursively,
+  buildTreeDown
 } from './sqlUtils';
 const { spasm } = require('spasm.js');
 
@@ -683,17 +714,59 @@ describe("fetchAllSpasmEventsV2ByIds() function tests", () => {
       moderateDeleteValidDmpReply, poolTest
     )).toStrictEqual(true)
 
-    expect(
-      (
-        await fetchAllSpasmEventsV2ByIds(
-          [
-            validDmpEventSignedClosedConvertedToSpasmV2.ids[0].value,
-            moderateDeleteValidDmpReplyConvertedToSpasmEventV2.ids[0].value
-          ],
-          poolTest
-        )
-      )[1].content
-    ).toStrictEqual("delete")
+    expect((await fetchAllSpasmEventsV2ByIds(
+      [
+        validDmpEventSignedClosedConvertedToSpasmV2.ids[0].value,
+        moderateDeleteValidDmpReplyConvertedToSpasmEventV2.ids[0].value
+      ], poolTest
+    ))[1].content).toStrictEqual("delete")
+
+    // Short IDs
+    expect((await fetchAllSpasmEventsV2ByShortId(
+      // Full
+      moderateDeleteValidDmpReplyConvertedToSpasmEventV2.ids[0].value,
+      poolTest
+    ))[0].content).toStrictEqual("delete")
+
+    expect((await fetchAllSpasmEventsV2ByShortId(
+      // Full
+      moderateDeleteValidDmpReplyConvertedToSpasmEventV2.ids[1].value,
+      poolTest
+    ))[0].content).toStrictEqual("delete")
+
+    expect((await fetchAllSpasmEventsV2ByShortId(
+      // Short
+      moderateDeleteValidDmpReplyConvertedToSpasmEventV2.ids[0].value.toString().slice(0,20),
+      poolTest
+    ))[0].content).toStrictEqual("delete")
+
+    expect((await fetchAllSpasmEventsV2ByShortId(
+      // Short
+      moderateDeleteValidDmpReplyConvertedToSpasmEventV2.ids[1].value.toString().slice(0,20),
+      poolTest
+    ))[0].content).toStrictEqual("delete")
+
+    expect((await fetchAllSpasmEventsV2ByShortId(
+      // Invalid
+      moderateDeleteValidDmpReplyConvertedToSpasmEventV2.ids[0].value.toString().slice(0,19) + 'a',
+      poolTest
+    ))).toStrictEqual([])
+
+    expect((await fetchAllSpasmEventsV2ByShortId(
+      // Too short
+      moderateDeleteValidDmpReplyConvertedToSpasmEventV2.ids[1].value.toString().slice(0,14),
+      poolTest
+    ))).toStrictEqual(null)
+
+    expect((await fetchSpasmEventV2ByShortId(
+      validDmpEventSignedClosedConvertedToSpasmV2.ids[0].value.toString().slice(0,20),
+      poolTest
+    )).title).toStrictEqual("genesis")
+
+    expect((await fetchSpasmEventV2ByShortId(
+      moderateDeleteValidDmpReplyConvertedToSpasmEventV2.ids[1].value.toString().slice(0,20),
+      poolTest
+    )).content).toStrictEqual("delete")
 
     // Clean up db table after testing.
     expect(
@@ -707,7 +780,8 @@ describe("fetchAllSpasmEventsV2ByIds() function tests", () => {
 });
 
 // fetchAllSpasmEventsV2ByParentId()
-describe("fetchAllSpasmEventsV2ByParentId() tests", () => {
+// fetchAllSpasmEventsV2ByParentIds()
+describe("fetchAllSpasmEventsV2ByParentId() and fetchAllSpasmEventsV2ByParentIds() tests", () => {
   test("should return true if passed true", async () => {
     const input = true;
     const output = true;
@@ -733,9 +807,39 @@ describe("fetchAllSpasmEventsV2ByParentId() tests", () => {
       validDmpReactionUpvoteSignedClosed, poolTest
     )).toStrictEqual(true)
 
+    // Single parent ID
     expect((await fetchAllSpasmEventsV2ByParentId(
       validDmpEventSignedClosed.signature, poolTest
     ))[0].content).toStrictEqual("upvote")
+
+    expect((await fetchAllSpasmEventsV2ByParentId(
+      null, poolTest
+    ))).toStrictEqual(null)
+
+    // action: "any"
+    expect((await fetchAllSpasmEventsV2ByParentId(
+      validDmpEventSignedClosed.signature, poolTest, "any"
+    ))[0].content).toStrictEqual("upvote")
+
+    // action: "react"
+    expect((await fetchAllSpasmEventsV2ByParentId(
+      validDmpEventSignedClosed.signature, poolTest, "react"
+    ))[0].content).toStrictEqual("upvote")
+
+    // alias
+    expect((await fetchAllReactionsByParentId(
+      validDmpEventSignedClosed.signature, poolTest
+    ))[0].content).toStrictEqual("upvote")
+
+    // action: "reply"
+    expect((await fetchAllSpasmEventsV2ByParentId(
+      validDmpEventSignedClosed.signature, poolTest, "reply"
+    )).length).toStrictEqual(0)
+
+    // alias
+    expect((await fetchCommentsByParentId(
+      validDmpEventSignedClosed.signature, poolTest
+    )).length).toStrictEqual(0)
 
     expect(await insertSpasmEventV2(
       validDmpReactionDownvoteSignedClosed, poolTest
@@ -744,6 +848,158 @@ describe("fetchAllSpasmEventsV2ByParentId() tests", () => {
     expect((await fetchAllSpasmEventsV2ByParentId(
       validDmpEventSignedClosed.signature, poolTest
     ))[1].content).toStrictEqual("downvote")
+
+    // Multiple parent IDs
+    expect((await fetchAllSpasmEventsV2ByParentIds(
+      [validDmpEventSignedClosed.signature], poolTest
+    ))[0].authors[0].addresses[0].value).not.toEqual(null)
+
+    expect((await fetchAllSpasmEventsV2ByParentIds(
+      [validDmpEventSignedClosed.signature], poolTest
+    ))[0].authors[0].addresses[0].value).toStrictEqual(
+      validDmpReactionUpvoteSignedClosedConvertedToSpasmEventV2
+        .authors[0].addresses[0].value
+    )
+
+    expect((await fetchAllSpasmEventsV2ByParentIds(
+      [validDmpEventSignedClosed.signature], poolTest
+    ))[1].authors[0].addresses[0].value).toStrictEqual(
+      spasm.convertToSpasm(
+        validDmpReactionDownvoteSignedClosed
+      ).authors[0].addresses[0].value
+    )
+
+    expect(await insertSpasmEventV2(
+      validDmpReplySignedClosed, poolTest
+    )).toStrictEqual(true)
+
+    expect((await fetchAllCommentsByParentId(
+      validDmpEventSignedClosed.signature, poolTest
+    ))[0].content).toStrictEqual("new comment")
+
+    expect((await fetchAllSpasmEventsV2ByParentIds(
+      [validDmpEventSignedClosed.signature], poolTest
+    ))[2].authors[0].addresses[0].value).toStrictEqual(
+      spasm.convertToSpasm(validDmpReplySignedClosed)
+        .authors[0].addresses[0].value
+    )
+
+    // Simply inserting moderation event doesn't delete any event
+    expect(await insertSpasmEventV2(
+      moderateDeleteValidDmpReply, poolTest
+    )).toStrictEqual(true)
+
+    expect((await fetchAllSpasmEventsV2ByParentIds(
+      [
+        validDmpEventSignedClosed.signature,
+        validDmpReplySignedClosed.signature
+      ], poolTest
+    ))[3].authors[0].addresses[0].value).toStrictEqual(
+      spasm.convertToSpasm(moderateDeleteValidDmpReply)
+        .authors[0].addresses[0].value
+    )
+
+    // action: "any"
+    expect((await fetchAllSpasmEventsV2ByParentIds(
+      [
+        validDmpEventSignedClosed.signature,
+        validDmpReplySignedClosed.signature
+      ], poolTest, "any"
+    ))[3].authors[0].addresses[0].value).toStrictEqual(
+      spasm.convertToSpasm(moderateDeleteValidDmpReply)
+        .authors[0].addresses[0].value
+    )
+
+    expect((await fetchAllSpasmEventsV2ByParentIds(
+      [
+        validDmpEventSignedClosed.signature,
+        validDmpReplySignedClosed.signature
+      ], poolTest
+    )).length).toStrictEqual(4)
+
+    expect((await fetchAllSpasmEventsV2ByParentIds(
+      [
+        validDmpEventSignedClosed.signature,
+        validDmpReplySignedClosed.signature
+      ], poolTest, "any"
+    )).length).toStrictEqual(4)
+
+    // action: "react"
+    expect((await fetchAllSpasmEventsV2ByParentIds(
+      [
+        validDmpEventSignedClosed.signature,
+        validDmpReplySignedClosed.signature
+      ], poolTest, "react"
+    )).length).toStrictEqual(2)
+
+    // alias
+    expect((await fetchAllReactionsByParentIds(
+      [
+        validDmpEventSignedClosed.signature,
+        validDmpReplySignedClosed.signature
+      ], poolTest
+    )).length).toStrictEqual(2)
+
+    // action: "reply"
+    expect((await fetchAllSpasmEventsV2ByParentIds(
+      [
+        validDmpEventSignedClosed.signature,
+        validDmpReplySignedClosed.signature
+      ], poolTest, "reply"
+    )).length).toStrictEqual(1)
+
+    // alias
+    expect((await fetchCommentsByParentIds(
+      [
+        validDmpEventSignedClosed.signature,
+        validDmpReplySignedClosed.signature
+      ], poolTest
+    )).length).toStrictEqual(1)
+
+    // action: "moderate"
+    expect((await fetchAllSpasmEventsV2ByParentIds(
+      [
+        validDmpEventSignedClosed.signature,
+        validDmpReplySignedClosed.signature
+      ], poolTest, "moderate"
+    )).length).toStrictEqual(1)
+
+    expect((await fetchAllSpasmEventsV2ByParentIds(
+      [
+        validDmpEventSignedClosed.signature,
+        validDmpReplySignedClosed.signature
+      ], poolTest, "moderate"
+    ))[0].content).toStrictEqual("delete")
+
+    // alias
+    expect((await fetchAllModerationsByParentId(
+      validDmpReplySignedClosed.signature, poolTest
+    ))[0].content).toStrictEqual("delete")
+
+    expect((await fetchAllModerationsByParentIds(
+      [
+        validDmpEventSignedClosed.signature,
+        validDmpReplySignedClosed.signature
+      ], poolTest
+    ))[0].content).toStrictEqual("delete")
+
+    expect((await fetchAllSpasmEventsV2ByParentIds(
+      [
+        validDmpEventSignedClosed.signature,
+        validDmpReplySignedClosed.signature
+      ], poolTest, "moderate"
+    ))[0].authors[0].addresses[0].value).toStrictEqual(
+      spasm.convertToSpasm(moderateDeleteValidDmpReply)
+        .authors[0].addresses[0].value
+    )
+
+    // action: "admin"
+    expect((await fetchAllSpasmEventsV2ByParentIds(
+      [
+        validDmpEventSignedClosed.signature,
+        validDmpReplySignedClosed.signature
+      ], poolTest, "admin"
+    )).length).toStrictEqual(0)
 
     // Clean up db table after testing.
     expect(await cleanDbTable("spasm_events", poolTest)
@@ -1031,6 +1287,300 @@ describe("incrementSpasmEventStats() tests", () => {
     ).toStrictEqual(0)
 
     // tests here
+
+    // Clean up db table after testing.
+    expect(await cleanDbTable("spasm_events", poolTest)
+    ).toStrictEqual(true);
+
+    expect(await howManyEntriesInTable("spasm_events", poolTest)
+    ).toStrictEqual(0)
+  });
+});
+
+// Tree
+describe("Tests for different tree-related functions", () => {
+  test("Tests for comments", async () => {
+    // Clean up db table before testing.
+    expect(await cleanDbTable("spasm_events", poolTest)
+    ).toStrictEqual(true);
+
+    expect(await howManyEntriesInTable("spasm_events", poolTest)
+    ).toStrictEqual(0)
+
+    expect(await insertSpasmEventV2(
+      copyOf(validDmpEventSignedClosed), poolTest
+    )).toStrictEqual(true)
+
+    expect(await insertSpasmEventV2(
+      copyOf(validPostWithNostrReplyToDmpEventConvertedToSpasmV2), poolTest
+    )).toStrictEqual(true)
+
+    expect(await insertSpasmEventV2(
+      copyOf(validSpasmWithDmpReplyToDmpEventV0ConvertedToSpasmEventV2), poolTest
+    )).toStrictEqual(true)
+
+    expect(await howManyEntriesInTable(
+      "spasm_events", poolTest
+    )).toStrictEqual(3)
+
+    // Cannot compare with the whole event because of
+    // different db and stats values.
+    const eventWithComments = await fetchAndAddCommentsToEvent(
+      copyOf(validDmpEventSignedClosedConvertedToSpasmV2),
+      poolTest
+    )
+    eventWithComments.db = {}
+    eventWithComments.stats = []
+    eventWithComments.children[0].event.db = {}
+    eventWithComments.children[0].event.stats = []
+    eventWithComments.children[1].event.db = {}
+    eventWithComments.children[1].event.stats = []
+    const outputWithoutDb = copyOf(
+      validDmpEventSignedClosedConvertedToSpasmV2WithTwoChildren
+    )
+    outputWithoutDb.db = {}
+    outputWithoutDb.stats = []
+    outputWithoutDb.children[0].event.db = {}
+    outputWithoutDb.children[0].event.stats = []
+    outputWithoutDb.children[1].event.db = {}
+    outputWithoutDb.children[1].event.stats = []
+    expect(eventWithComments).toStrictEqual(outputWithoutDb)
+
+    // Clean up db table after testing.
+    expect(await cleanDbTable("spasm_events", poolTest)
+    ).toStrictEqual(true);
+
+    expect(await howManyEntriesInTable("spasm_events", poolTest)
+    ).toStrictEqual(0)
+  });
+
+  test("Tests for comments", async () => {
+    // Clean up db table before testing.
+    expect(await cleanDbTable("spasm_events", poolTest)
+    ).toStrictEqual(true);
+
+    expect(await howManyEntriesInTable("spasm_events", poolTest)
+    ).toStrictEqual(0)
+
+    expect(await insertSpasmEventV2(
+      copyOf(childOfGenesisDepth1Branch1Author1ReplySpasmEventV2),
+      poolTest)).toStrictEqual(true)
+
+    expect(await insertSpasmEventV2(
+      copyOf(childOfGenesisDepth2Branch1Author2ReplySpasmEventV2),
+      poolTest)).toStrictEqual(true)
+
+    expect(await insertSpasmEventV2(
+      copyOf(childOfGenesisDepth3Branch1Author1ReplySpasmEventV2),
+      poolTest)).toStrictEqual(true)
+
+    expect(await insertSpasmEventV2(
+      copyOf(childOfGenesisDepth4Branch1Author2ReplySpasmEventV2),
+      poolTest)).toStrictEqual(true)
+
+    expect(await insertSpasmEventV2(
+      copyOf(childOfGenesisDepth5Branch1Author1ReplySpasmEventV2),
+      poolTest)).toStrictEqual(true)
+
+    expect(await insertSpasmEventV2(
+      copyOf(childOfGenesisDepth6Branch1Author2ReplySpasmEventV2),
+      poolTest)).toStrictEqual(true)
+
+    expect(await insertSpasmEventV2(
+      copyOf(childOfGenesisDepth7Branch1Author1ReplySpasmEventV2),
+      poolTest)).toStrictEqual(true)
+
+    expect(await insertSpasmEventV2(
+      copyOf(childOfGenesisDepth8Branch1Author2ReplySpasmEventV2),
+      poolTest)).toStrictEqual(true)
+
+    expect(await insertSpasmEventV2(
+      copyOf(childOfGenesisDepth9Branch1Author1ReplySpasmEventV2),
+      poolTest)).toStrictEqual(true)
+
+    expect(await insertSpasmEventV2(
+      copyOf(childOfGenesisDepth10Branch1Author2ReplySpasmEventV2),
+      poolTest)).toStrictEqual(true)
+
+    expect(await insertSpasmEventV2(
+      copyOf(childOfGenesisDepth11Branch1Author1ReplySpasmEventV2),
+      poolTest)).toStrictEqual(true)
+
+    expect(await insertSpasmEventV2(
+      copyOf(childOfGenesisDepth12Branch1Author2ReplySpasmEventV2),
+      poolTest)).toStrictEqual(true)
+
+    const genesisWithCommentsMaxDepthDefault =
+      await fetchAndAddCommentsRecursively(
+      copyOf(validDmpEventSignedClosedConvertedToSpasmV2),
+      poolTest
+    )
+    
+    // Default recursion max depth is 10
+    const genesisChildReplyDepth10 = 
+      genesisWithCommentsMaxDepthDefault
+       .children[0].event.children[0].event
+       .children[0].event.children[0].event
+       .children[0].event.children[0].event
+       .children[0].event.children[0].event
+       .children[0].event.children[0].event
+
+    expect(isObjectWithValues(genesisChildReplyDepth10)
+    ).toStrictEqual(true)
+
+    expect(copyOf(genesisChildReplyDepth10).type
+    ).toStrictEqual("SpasmEventV2")
+
+    expect(copyOf(genesisChildReplyDepth10).content
+    ).toStrictEqual(
+      "reply to genesis depth 10, branch 1, author 2"
+    )
+
+    expect(copyOf(genesisChildReplyDepth10).children
+    ).toStrictEqual(undefined)
+
+    expect(copyOf(genesisChildReplyDepth10).children
+    ).toStrictEqual(undefined)
+
+    expect(copyWithoutDbStats(genesisChildReplyDepth10)
+    ).toStrictEqual(copyWithoutDbStats(
+      childOfGenesisDepth10Branch1Author2ReplySpasmEventV2
+    ))
+
+    // convertToSpasm should not remove any children
+    const genesisWithCommentsMaxDepthDefaultConvertedToSpasmEventV2 =
+      spasm.convertToSpasm(genesisWithCommentsMaxDepthDefault)
+
+    const genesisChildReplyDepth10OfConvertedToSpasmEventV2 = 
+      genesisWithCommentsMaxDepthDefaultConvertedToSpasmEventV2
+       .children[0].event.children[0].event
+       .children[0].event.children[0].event
+       .children[0].event.children[0].event
+       .children[0].event.children[0].event
+       .children[0].event.children[0].event
+
+    expect(copyOf(genesisChildReplyDepth10OfConvertedToSpasmEventV2).type
+    ).toStrictEqual("SpasmEventV2")
+
+    expect(copyOf(genesisChildReplyDepth10OfConvertedToSpasmEventV2).content
+    ).toStrictEqual(
+      "reply to genesis depth 10, branch 1, author 2"
+    )
+
+    expect(copyWithoutDbStats(genesisChildReplyDepth10OfConvertedToSpasmEventV2)
+    ).toStrictEqual(copyWithoutDbStats(
+      childOfGenesisDepth10Branch1Author2ReplySpasmEventV2
+    ))
+
+    const genesisWithCommentsMaxDepthDefaultConvertedToSpasmEventEnvelopeV2 =
+      spasm.convertToSpasmEventEnvelope(
+        genesisWithCommentsMaxDepthDefault, "2.0.0"
+    )
+    expect(copyOf(genesisWithCommentsMaxDepthDefaultConvertedToSpasmEventEnvelopeV2).type
+    ).toStrictEqual("SpasmEventEnvelopeV2")
+    // Event doesn't have attached comments because all relatives
+    // are dropped when converting to Envelope without tree.
+    expect("children" in (copyOf(
+      genesisWithCommentsMaxDepthDefaultConvertedToSpasmEventEnvelopeV2)
+    )).toStrictEqual(false)
+
+    const genesisWithCommentsMaxDepthDefaultConvertedToSpasmEventEnvelopeWithTreeV2 =
+      spasm.convertToSpasmEventEnvelopeWithTree(
+        genesisWithCommentsMaxDepthDefault, "2.0.0"
+    )
+    expect("children" in (copyOf(
+      genesisWithCommentsMaxDepthDefaultConvertedToSpasmEventEnvelopeWithTreeV2)
+    )).toStrictEqual(true)
+    expect(copyOf(
+      genesisWithCommentsMaxDepthDefaultConvertedToSpasmEventEnvelopeWithTreeV2
+    )
+      .children[0].event.children[0].event
+      .children[0].event.children[0].event
+      .children[0].event.children[0].event
+      .children[0].event.children[0].event
+      .children[0].event.children[0].event.type
+    ).toStrictEqual("SpasmEventEnvelopeWithTreeV2")
+    expect(copyOf(
+      genesisWithCommentsMaxDepthDefaultConvertedToSpasmEventEnvelopeWithTreeV2
+    )
+      .children[0].event.children[0].event
+      .children[0].event.children[0].event
+      .children[0].event.children[0].event
+      .children[0].event.children[0].event
+      .children[0].event.children[0].event.content
+    ).toStrictEqual(undefined)
+    expect(copyOf(
+      genesisWithCommentsMaxDepthDefaultConvertedToSpasmEventEnvelopeWithTreeV2
+    )
+      .children[0].event.children[0].event
+      .children[0].event.children[0].event
+      .children[0].event.children[0].event
+      .children[0].event.children[0].event
+      .children[0].event.children[0].event.ids
+    ).toStrictEqual(copyOf(
+      childOfGenesisDepth10Branch1Author2ReplySpasmEventV2.ids
+    ))
+
+    expect(copyOf(genesisWithCommentsMaxDepthDefaultConvertedToSpasmEventEnvelopeV2).type
+    ).toStrictEqual("SpasmEventEnvelopeV2")
+    // Event doesn't have attached comments because all relatives
+    // are dropped when converting to Envelope without tree.
+    expect("children" in (copyOf(
+      genesisWithCommentsMaxDepthDefaultConvertedToSpasmEventEnvelopeV2)
+    )).toStrictEqual(false)
+
+    const genesisChildReplyDepth10OfConvertedToSpasmEventEnvelopeWithTreeV2 = 
+      genesisWithCommentsMaxDepthDefaultConvertedToSpasmEventEnvelopeWithTreeV2
+       .children[0].event.children[0].event
+       .children[0].event.children[0].event
+       .children[0].event.children[0].event
+       .children[0].event.children[0].event
+       .children[0].event.children[0].event
+
+    expect(copyOf(genesisChildReplyDepth10OfConvertedToSpasmEventEnvelopeWithTreeV2).type
+    ).toStrictEqual("SpasmEventEnvelopeWithTreeV2")
+    // Event with depth 10 doesn't have any attached comments
+    // because it was the last fetched event of default maxDepth.
+    expect("children" in (copyOf(
+      genesisChildReplyDepth10OfConvertedToSpasmEventEnvelopeWithTreeV2)
+    )).toStrictEqual(false)
+
+
+    // buildTreeDown()
+    const childOfGenesisDepth2WithCommentsMaxDepthDefault =
+      await buildTreeDown(
+      copyOf(childOfGenesisDepth2Branch1Author2ReplySpasmEventV2),
+      poolTest
+    )
+
+    const genesisChildReplyDepth12 = 
+      childOfGenesisDepth2WithCommentsMaxDepthDefault
+       .children[0].event.children[0].event
+       .children[0].event.children[0].event
+       .children[0].event.children[0].event
+       .children[0].event.children[0].event
+       .children[0].event.children[0].event
+
+    expect(copyOf(genesisChildReplyDepth12).content
+    ).toStrictEqual(
+      "reply to genesis depth 12, branch 1, author 2"
+    )
+
+    const genesisWithCommentsMaxDepth1 =
+      await buildTreeDown(
+      copyOf(validDmpEventSignedClosedConvertedToSpasmV2),
+      poolTest, 1
+    )
+
+    expect(copyOf(genesisWithCommentsMaxDepth1)
+     .children[0].event.content
+    ).toStrictEqual(
+      "reply to genesis depth 1, branch 1, author 1"
+    )
+
+    expect(copyOf(genesisWithCommentsMaxDepth1)
+     .children[0].event.children
+    ).toStrictEqual(undefined)
 
     // Clean up db table after testing.
     expect(await cleanDbTable("spasm_events", poolTest)
