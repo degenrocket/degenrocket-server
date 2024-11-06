@@ -219,8 +219,22 @@ export const submitSpasmEvent = async (
       // return "An event with the same Spasm ID is already in database. Merged two events together."
     }
 
-    const isToBeIncrementedLater =
-      !(await isReactionDuplicate(spasmEvent, pool))
+    let isToBeIncrementedLater: boolean = false
+    // duplicate web3 events should not increment stats
+    if (
+      spasm.hasSignatureNostr(spasmEvent) ||
+      spasm.hasSignatureEthereum(spasmEvent)
+    ) {
+      isToBeIncrementedLater =
+        !(await isReactionDuplicate(spasmEvent, pool))
+    // web2 events (without signature) should be safe
+    // since they should not be of action 'react' or 'reply'.
+    } else {
+      isToBeIncrementedLater = true
+    }
+
+    // const isToBeIncrementedLater =
+    //   !(await isReactionDuplicate(spasmEvent, pool))
     // console.log('isToBeIncrementedLater:', isToBeIncrementedLater)
 
     // const time = new Date(Date.now()).toISOString();
@@ -266,7 +280,19 @@ export const submitSpasmEvent = async (
         ? "Success. Action saved and target deleted"
         : "Action saved, but target not deleted"
 
-    // Reaction, reply, vote
+    // Reaction, reply, vote (duplicate)
+    } else if (
+      !isToBeIncrementedLater &&
+      (
+        spasmEvent.action === "react" ||
+        spasmEvent.action === "reply" ||
+        spasmEvent.action === "vote"
+      )
+    ) {
+      // Inserting duplicate actions is currently not allowed
+      return "Sorry, but you've already submitted the same action"
+
+    // Reaction, reply, vote (unique)
     } else if (
       isToBeIncrementedLater &&
       (
@@ -292,7 +318,8 @@ export const submitSpasmEvent = async (
         : "Action has been saved, but count was not incremented"
 
     // Catch all (e.g., 'moderate' event, but not 'delete')
-    // post, reply, etc.
+    // post
+    // reaction, reply, vote (duplicate)
     } else {
       // Insert reaction event into db even if this signer has
       // already submitted the same reaction for this target,
@@ -302,8 +329,13 @@ export const submitSpasmEvent = async (
       )
       
       if (insertSuccess) {
-        if (spasmEvent.action === "reply") {
-          return "Success. Action has been saved and incremented"
+        if (
+          spasmEvent.action === "reply" ||
+          spasmEvent.action === "react" ||
+          spasmEvent.action === "vote"
+        ) {
+          // return "Success. Action has been saved and incremented"
+          return "Sorry, but you've already submitted the same action"
         } else {
           return "Success. The event was saved into database"
         }

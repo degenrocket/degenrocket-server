@@ -27,6 +27,7 @@ import {
 } from "../helper/sql/sqlUtils";
 import {poolDefault} from "../db";
 import { env } from "./../appConfig";
+import {toBeHex} from "../helper/utils/nostrUtils";
 const {
   enableShortUrlsForWeb3Actions,
   shortUrlsLengthOfWeb3Ids,
@@ -240,19 +241,17 @@ app.get("/api/short-id/:id", async(req: Request, res: Response) => {
 })
 
 app.post("/api/submit/", async (req: Request, res: Response) => {
-  // console.log("===========================================")
-  // console.log('POST on /api/submit/ was called');
+  const event = req.body.unknownEvent
+    ? req.body.unknownEvent
+    : req.body
 
+  console.log("event:", event)
   // Submit V2
-  if ('unknownEvent' in req.body) {
-    await submitSpasmEvent(req.body.unknownEvent); 
-  } else {
-    await submitSpasmEvent(req.body); 
-  }
+  const submitResult = await submitSpasmEvent(event);
 
+  // TODO delete after full transition to V2
   // Submit V0/V1
-  const submitResult = await submitAction(req.body); 
-  // console.log("Sending submitResult to front:", submitResult)
+  if (!("type" in event)) { await submitAction(req.body) }
 
   return res.json(submitResult);
 });
@@ -334,6 +333,12 @@ app.get("/api/events/:id", async(req: Request, res: Response) => {
       id = String(req.params.id)
     }
 
+    // Convert Nostr's note ID to hex ID
+    if (
+      String(id).length === 63 &&
+      String(id).startsWith('note')
+    ) { id = toBeHex(String(id)) }
+
     if (id && isStringOrNumber(id)) {
       let event: SpasmEventV2 | null = null
       if (
@@ -387,7 +392,7 @@ app.get("/api/events/:id", async(req: Request, res: Response) => {
       }
     }
 
-    const setRes = () => res.json({ error: 'Event has not been found' })
+    const setRes = () => res.json({ error: 'ERROR: event has not been found' })
     setTimeout(setRes, 300)
     // res.json({ error: 'post has not been found' })
     return

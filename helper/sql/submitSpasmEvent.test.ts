@@ -281,15 +281,17 @@ describe("multiple tests for submitSpasmEvent", () => {
     // signer, but different signature, because it's technically
     // a different event.
     // Stats should not change when a duplicate is submitted.
+    // Duplicate events (reply, react, vote) are currently
+    // not being saved into the database.
     customConfig.web3.action.react.enabled = true
     expect(await submitSpasmEvent(
       validDmpReactionUpvoteSignedClosedDuplicate,
       poolTest,
       customConfig
-    )).toStrictEqual("Success. The event was saved into database")
+    )).toStrictEqual("Sorry, but you've already submitted the same action")
     expect(
       await howManyEntriesInTable("spasm_events", poolTest)
-    ).toStrictEqual(3)
+    ).toStrictEqual(2)
     const genesisAfterUpvoteAndDuplicate = await fetchSpasmEventV2ById(
       validDmpEventSignedClosed.signature, poolTest
     )

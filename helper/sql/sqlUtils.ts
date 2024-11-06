@@ -17,6 +17,9 @@ import {
   toBeString,
   toBeTimestamp
 } from "../utils/utils";
+import {
+  toBeHex
+} from "../utils/nostrUtils";
 import { env } from "./../../appConfig";
 const DOMPurify = require('isomorphic-dompurify');
 const { spasm } = require('spasm.js');
@@ -819,9 +822,19 @@ export const fetchAllSpasmEventsV2BySigner = async (
   if (!dirtySigner || typeof(dirtySigner) !== "string") {
     return null
   }
+  if (!dirtyDbTable || typeof(dirtyDbTable) !== "string") {
+    return null
+  }
 
-  const signer = DOMPurify.sanitize(dirtySigner)
   const dbTable = DOMPurify.sanitize(dirtyDbTable)
+  if (!dbTable) return null
+  let signer = DOMPurify.sanitize(dirtySigner)
+  if (!signer) return null
+  if (
+    typeof(signer) === "string" &&
+    signer.length === 63 &&
+    signer.startsWith("npub")
+  ) { signer = toBeHex(signer) }
 
   try {
     // Works
@@ -1032,13 +1045,16 @@ export const isReactionDuplicate = async (
 
     const verifiedSigners: (string | number)[] =
       spasm.getVerifiedSigners(spasmEventV2)
+      console.log("verifiedSigners:", verifiedSigners)
 
     if (
       !verifiedSigners ||
       !Array.isArray(verifiedSigners) ||
       !hasValue(verifiedSigners)
     ) {
-      return false
+      // return as duplicate to avoid exploits
+      // with invalid signers
+      return true
     }
 
     const parentIds: (string | number)[] =
@@ -1144,6 +1160,17 @@ const isReactionDuplicateForThisSignerAndThisParentId = async (
   pool = poolDefault,
   dirtyDbTable = "spasm_events"
 ): Promise<boolean> => {
+  if (!signer) { return null }
+  if (!parentId) { return null }
+  if (!isStringOrNumber(signer)) { return false }
+  if (!isStringOrNumber(parentId)) { return false }
+  if (typeof(signer) === "string") {
+    signer = signer.toLowerCase()
+  }
+  if (typeof(parentId) === "string") {
+    parentId = parentId.toLowerCase()
+  }
+
   try {
     const dbTable = DOMPurify.sanitize(dirtyDbTable)
     if (
@@ -1833,7 +1860,7 @@ export const fetchAllSpasmEventsV2ByFilter = async (
           SELECT 1
           FROM jsonb_array_elements(spasm_events.stats) AS stat
           WHERE stat->>'action' = 'react'
-          AND (stat->>'total')::integer > $${params.length}
+          AND (stat->>'total')::integer >= $${params.length}
         )
       `)
     }
