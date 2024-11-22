@@ -842,6 +842,7 @@ export const fetchAllSpasmEventsV2BySigner = async (
       SELECT *
       FROM ${dbTable}
       WHERE spasm_event @> $1::jsonb
+      ORDER BY db_added_timestamp DESC
       `,
       [
         // TODO add filter by action
@@ -1760,6 +1761,7 @@ export const fetchAllSpasmEventsV2ByFilter = async (
 ): Promise<SpasmEventV2[] | null> => {
   console.log("filters:", filters)
   let limit = 20
+  const maxLimit = 300
   // spasm.sanitizeEvent() can sanitize any object/array
   spasm.sanitizeEvent(filters)
 
@@ -1782,6 +1784,8 @@ export const fetchAllSpasmEventsV2ByFilter = async (
   ) {
     // Do nothing
   }
+
+  if (limit > maxLimit) { limit = maxLimit }
 
   try {
     const dbTable = DOMPurify.sanitize(dirtyDbTable)
@@ -1910,6 +1914,7 @@ export const fetchAllSpasmEventsV2ByFilter = async (
 
     console.log("sqlQuery:", sqlQuery)
     console.log("params:", params)
+    // console.log("conditions:", conditions)
 
     const events = await pool.query(sqlQuery, params)
 

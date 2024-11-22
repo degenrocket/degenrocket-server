@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import { fetchAllPosts } from "../helper/sql/fetchAllPosts";
 import { fetchPostById } from "../helper/sql/fetchPostById";
-import { fetchPostsByAuthor } from "../helper/sql/fetchPostsByAuthor";
+// import { fetchPostsByAuthor } from "../helper/sql/fetchPostsByAuthor";
 import { fetchAllActionsByCounting } from "../helper/sql/fetchAllActionsByCounting";
 import { fetchTargetActionsByCounting } from "../helper/sql/fetchTargetActionsByCounting";
 import { fetchTargetComments } from "../helper/sql/fetchTargetComments";
