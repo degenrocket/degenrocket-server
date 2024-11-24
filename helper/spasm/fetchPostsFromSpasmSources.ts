@@ -137,13 +137,14 @@ export const fetchPostsFromSpasmSources = async (frequency?: string) => {
           if (ignoreWhitelistForActionReplyInSpasmModule) {
             customConfig.whitelist.action.reply.enabled = false
           }
-          submitSpasmEvent(post, poolDefault, customConfig)
+          return submitSpasmEvent(post, poolDefault, customConfig)
 
+          // Deprecated
           // Submit V0/V1
-          return submitAction(
-            { unknownEvent: post },
-            ignoreWhitelistFor
-          )
+          // return submitAction(
+          //   { unknownEvent: post },
+          //   ignoreWhitelistFor
+          // )
         }))
       } else {
         console.log("data for submitAction is null")
