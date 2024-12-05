@@ -344,3 +344,16 @@ export const toBeNpubs = convertHexOrNpubAddressesToNpub
 
 export const toBeNote = convertHexNoteNeventIdToNote
 export const toBeNotes = convertHexNoteNeventIdsToNote
+
+export const isHex = (
+  value: string
+): boolean => {
+  if (!value) return false
+  if (typeof(value) !== "string") return false
+  const hexChars = [
+    "0","1","2","3","4","5","6","7","8","9",
+    "a","b","c","d","e","f"
+  ]
+  const valueArray = value.toLowerCase().split("")
+  return valueArray.every(char => hexChars.includes(char))
+}
