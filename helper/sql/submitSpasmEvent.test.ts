@@ -57,6 +57,16 @@ const configEverythingDisabled: ConfigForSubmitSpasmEvent = {
   moderation: {
     enabled: false,
     list: []
+  },
+  admin: {
+    enabled: false,
+    list: []
+  },
+  appConfig: {
+    changes: {
+      allowed: false,
+      allowedByAdmin: false
+    }
   }
 }
 

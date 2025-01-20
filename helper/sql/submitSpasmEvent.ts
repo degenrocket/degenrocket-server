@@ -20,6 +20,9 @@ import {
   incrementSpasmEventActionV2,
   fetchEventWithSameUrlIdFromDbV2
 } from "./sqlUtils";
+import {
+  updateAppConfig
+} from "./../../appConfig"
 const { spasm } = require('spasm.js');
 
 // Override console.log for production
@@ -54,6 +57,9 @@ export const submitSpasmEvent = async (
   customConfig?: CustomConfigForSubmitSpasmEvent,
   // ignoreWhitelistFor = new IgnoreWhitelistFor()
 ): Promise<string> => {
+  let isAppConfig = false
+  let isAdminEvent = false
+  let dbTable = ""
   const defaultConfig = new ConfigForSubmitSpasmEvent()
   const config: ConfigForSubmitSpasmEvent =
     mergeConfigsForSubmitSpasmEvent(
@@ -81,6 +87,58 @@ export const submitSpasmEvent = async (
     }
 
     if (
+      'action' in spasmEvent && spasmEvent.action &&
+      typeof(spasmEvent.action) === "string"
+    ) {
+      // App config events
+      if (spasmEvent.action.startsWith('app-config')) {
+        if (!config.appConfig.changes.allowed) {
+          return "ERROR: changing app config is not allowed"
+        }
+        if (!config.appConfig.changes.allowedByAdmin) {
+          return "ERROR: changing app config by admins is not allowed"
+        }
+        if (!config.admin.enabled) {
+          return "ERROR: admin is disabled"
+        }
+        if (
+          !Array.isArray(config.admin.list) ||
+          !hasValue(config.admin.list)
+        ) { return "ERROR: admins are not set" }
+        const isAnySignerAdmin =
+          spasm.isAnySignerListedIn(spasmEvent, config.admin.list)
+        if (!isAnySignerAdmin) {
+          return "ERROR: you're not an admin"
+        }
+
+        isAdminEvent = true
+        isAppConfig = true
+        dbTable = "app_configs"
+
+      // Admin events
+      } else if (spasmEvent.action.startsWith('admin')) {
+        if (!config.admin.enabled) {
+          return "ERROR: admin is disabled"
+        }
+        if (
+          !Array.isArray(config.admin.list) ||
+          !hasValue(config.admin.list)
+        ) { return "ERROR: admins are not set" }
+        const isAnySignerAdmin =
+          spasm.isAnySignerListedIn(spasmEvent, config.admin.list)
+        if (!isAnySignerAdmin) {
+          return "ERROR: you're not an admin"
+        }
+        isAdminEvent = true
+        dbTable = "admin_events"
+
+      // Other events
+      } else {
+        dbTable = "spasm_events"
+      }
+    }
+
+    if (
       (!('sig' in spasmEvent) || !hasValue(spasmEvent.sig)) &&
       (!('signature' in spasmEvent) || !hasValue(spasmEvent.signature)) &&
       (!('signatures' in spasmEvent) || !hasValue(spasmEvent.signatures)) &&
@@ -105,7 +163,11 @@ export const submitSpasmEvent = async (
     }
 
     // Environment variables
-    if (!config.web3.action.all.enabled) {
+    if (
+      !config.web3.action.all.enabled &&
+      !isAdminEvent &&
+      !isAppConfig
+    ) {
       return "ERROR: submitting all new web3 actions is currently disabled"
     }
 
@@ -115,7 +177,9 @@ export const submitSpasmEvent = async (
       // Has at least one Nostr signature
       spasm.hasSignatureNostr(spasmEvent) &&
       // Has no Ethereum signatures
-      !spasm.hasSignatureEthereum(spasmEvent)
+      !spasm.hasSignatureEthereum(spasmEvent) &&
+      !isAdminEvent &&
+      !isAppConfig
     ) {
       return "ERROR: submitting all new Nostr actions is currently disabled"
     }
@@ -126,35 +190,41 @@ export const submitSpasmEvent = async (
       // Has at least one Ethereum signature
       spasm.hasSignatureEthereum(spasmEvent) &&
       // Has no Nostr signatures
-      !spasm.hasSignatureNostr(spasmEvent)
+      !spasm.hasSignatureNostr(spasmEvent) &&
+      !isAdminEvent &&
+      !isAppConfig
     ) {
       return "ERROR: submitting all new Ethereum actions is currently disabled"
     }
 
     if (
       !config.web3.action.post.enabled &&
-      spasmEvent.action === 'post'
+      spasmEvent.action === 'post' &&
+      !isAdminEvent
     ) {
       return "ERROR: submitting new posts is currently disabled"
     }
 
     if (
       !config.web3.action.react.enabled &&
-      spasmEvent.action === 'react'
+      spasmEvent.action === 'react' &&
+      !isAdminEvent
     ) {
       return "ERROR: submitting new reactions is currently disabled"
     }
 
     if (
       !config.web3.action.reply.enabled &&
-      spasmEvent.action === 'reply'
+      spasmEvent.action === 'reply' &&
+      !isAdminEvent
     ) {
       return "ERROR: submitting new replies is currently disabled"
     }
 
     if (
       !config.web3.action.moderate.enabled &&
-      spasmEvent.action === 'moderate'
+      spasmEvent.action === 'moderate' &&
+      !isAdminEvent
     ) {
       return "ERROR: submitting new moderation actions is currently disabled"
     }
@@ -164,18 +234,49 @@ export const submitSpasmEvent = async (
     // enabled and ignoreWhitelist is set to false.
     // Flag ignoreWhitelist is used when e.g. posts are received
     // from other instances of the network via the SPASM module.
-    const isAnySignerWhitelistedForActionPost =
-      spasm.isAnySignerListedIn(
-      spasmEvent, config.whitelist.action.post.list
-    )
-
     if (
       spasmEvent.action === 'post' &&
-      config.whitelist.action.post.enabled &&
-      !isAnySignerWhitelistedForActionPost
+      config.whitelist.action.post.enabled
     ) {
-      console.log("ERROR: this address is not whitelisted to submit new posts")
-      return "ERROR: this address is not whitelisted to submit new posts"
+      const isAnySignerWhitelistedForActionPost =
+        spasm.isAnySignerListedIn(
+        spasmEvent, config.whitelist.action.post.list
+      )
+      if (
+        !isAnySignerWhitelistedForActionPost && !isAdminEvent
+      ) {
+        return "ERROR: this address is not whitelisted to submit new posts"
+      }
+    }
+    // Same for reply
+    if (
+      spasmEvent.action === 'reply' &&
+      config.whitelist.action.reply.enabled
+    ) {
+      const isAnySignerWhitelistedForActionReply =
+        spasm.isAnySignerListedIn(
+        spasmEvent, config.whitelist.action.reply.list
+      )
+      if (
+        !isAnySignerWhitelistedForActionReply && !isAdminEvent
+      ) {
+        return "ERROR: this address is not whitelisted to submit new replies"
+      }
+    }
+    // Same for react
+    if (
+      spasmEvent.action === 'react' &&
+      config.whitelist.action.react.enabled
+    ) {
+      const isAnySignerWhitelistedForActionReact =
+        spasm.isAnySignerListedIn(
+        spasmEvent, config.whitelist.action.react.list
+      )
+      if (
+        !isAnySignerWhitelistedForActionReact && !isAdminEvent
+      ) {
+        return "ERROR: this address is not whitelisted to submit new reactions"
+      }
     }
 
     if (await isEventBanned(spasmEvent, pool)) {
@@ -239,8 +340,46 @@ export const submitSpasmEvent = async (
 
     // const time = new Date(Date.now()).toISOString();
 
-    // Moderation
+    // AppConfig
     if (
+      spasmEvent.action?.startsWith('app-config') && isAppConfig
+    ) {
+      // Checking against config again for extra security
+      if (!config.appConfig.changes.allowed) {
+        return "ERROR: changing app config is not allowed"
+      }
+      if (!config.appConfig.changes.allowedByAdmin) {
+        return "ERROR: changing app config by admins is not allowed"
+      }
+      if (!config.admin.enabled) {
+        return "ERROR: admin is disabled"
+      }
+      if (
+        !Array.isArray(config.admin.list) ||
+        !hasValue(config.admin.list)
+      ) { return "ERROR: admins are not set" }
+      const isAnySignerAdmin =
+        spasm.isAnySignerListedIn(spasmEvent, config.admin.list)
+      if (!isAnySignerAdmin) {
+        return "ERROR: you're not an admin"
+      }
+      const insertSuccess = await insertSpasmEventV2(
+        spasmEvent, pool, dbTable
+      )
+
+      if (!!insertSuccess) {
+        const res = await updateAppConfig()
+        if (res && typeof(res) === "string") {
+          return res
+        } else {
+          return "ERROR: config saved, but not updated. Try again."
+        }
+      } else {
+        return "ERROR: event was not saved into database"
+      }
+
+    // Moderation
+    } else if (
       spasmEvent.action === "moderate" &&
       spasmEvent.content === "delete"
     ) {
@@ -250,9 +389,7 @@ export const submitSpasmEvent = async (
       if (
         !Array.isArray(config.moderation.list) ||
         !hasValue(config.moderation.list)
-      ) {
-        return "ERROR: moderators are not set"
-      }
+      ) { return "ERROR: moderators are not set" }
 
       const isAnySignerModerator =
         spasm.isAnySignerListedIn(
@@ -264,7 +401,7 @@ export const submitSpasmEvent = async (
       }
 
       const insertSuccess = await insertSpasmEventV2(
-        spasmEvent, pool
+        spasmEvent, pool, dbTable
       )
 
       if (!insertSuccess) {
@@ -302,7 +439,7 @@ export const submitSpasmEvent = async (
       )
     ) {
       const insertSuccess = await insertSpasmEventV2(
-        spasmEvent, pool 
+        spasmEvent, pool, dbTable
       )
 
       if (!insertSuccess) return "ERROR: event was not saved into database"
@@ -325,7 +462,7 @@ export const submitSpasmEvent = async (
       // already submitted the same reaction for this target,
       // but as a different event with different ID/signature.
       const insertSuccess = await insertSpasmEventV2(
-        spasmEvent, pool
+        spasmEvent, pool, dbTable
       )
       
       if (insertSuccess) {

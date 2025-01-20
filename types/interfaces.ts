@@ -1,18 +1,4 @@
 import { env } from "./../appConfig";
-const {
-  allowNewEventsWithoutSignature,
-  enableNewWeb3ActionsAll, 
-  enableNewWeb3ActionsPost,
-  enableNewWeb3ActionsReact,
-  enableNewWeb3ActionsReply,
-  enableNewWeb3ActionsModerate,
-  enableNewNostrActionsAll,
-  enableNewEthereumActionsAll,
-  enableModeration,
-  moderators,
-  enableWhitelistForActionPost,
-  whitelistedForActionPost
-} = env
 
 export type FiltersActivity = "hot" | "rising" | "all" | null;
 
@@ -413,7 +399,7 @@ export interface Post {
   children?: Post[] // spasmEvent.children.replies
 }
 
-export type Web3MessageAction = "post" | "react" | "reply" | "share" | "shared" | "moderate" | "admin"
+export type Web3MessageAction = "post" | "react" | "reply" | "share" | "shared" | "moderate" | "admin" | "app-config-dr"
 
 export type Web3MessageLicense = "MIT" | "CC0" | "CC0-1.0" | "SPDX-License-Identifier: CC0-1.0" | "SPDX-License-Identifier: MIT"
 
@@ -736,6 +722,192 @@ export interface KnownPostOrEventInfo {
 
 export type PrivateKeyType = "ethereum" | "nostr"
 
+export interface AppConfig {
+  // Cannot be changed via admin web page:
+  apiUrl?: string
+  enableAppConfigChanges?: boolean
+  enableAppConfigChangesByAdmin?: boolean
+  enableAdmin?: boolean
+  admins?: string[]
+  // Can be changed via admin web page:
+  // Booleans
+  allowNewEventsWithoutSignature?: boolean
+  enableNewWeb3ActionsAll?: boolean
+  enableNewWeb3ActionsPost?: boolean
+  enableNewWeb3ActionsReply?: boolean
+  enableNewWeb3ActionsReact?: boolean
+  enableNewWeb3ActionsModerate?: boolean
+  enableNewNostrActionsAll?: boolean
+  enableNewEthereumActionsAll?: boolean
+  enableModeration?: boolean
+  enableShortUrlsForWeb3Actions?: boolean
+  enableWhitelistForActionPost?: boolean
+  enableWhitelistForActionReply?: boolean
+  enableWhitelistForActionReact?: boolean
+  enableSpasmModule?: boolean
+  enableSpasmSourcesUpdates?: boolean
+  enableRssModule?: boolean
+  enableRssSourcesUpdates?: boolean
+  ignoreWhitelistForActionPostInSpasmModule?: boolean
+  ignoreWhitelistForActionReactInSpasmModule?: boolean
+  ignoreWhitelistForActionReplyInSpasmModule?: boolean
+  // Arrays
+  moderators?: string[]
+  whitelistedForActionPost?: string[]
+  whitelistedForActionReply?: string[]
+  whitelistedForActionReact?: string[]
+  // Numbers
+  feedFiltersActivityHot?: number
+  feedFiltersActivityRising?: number
+  shortUrlsLengthOfWeb3Ids?: number
+  // Strings
+  // Strings-socials
+  anotherWebsiteLink?: string
+  ipfsLink?: string
+  torLink?: string
+  ipfsHttpGatewayLink?: string
+  nostrLink?: string
+  sessionLink?: string
+  simplexLink?: string
+  statusLink?: string
+  lensLink?: string
+  hiveLink?: string
+  pushLink?: string
+  mirrorLink?: string
+  mastodonLink?: string
+  matrixLink?: string
+  discordLink?: string
+  telegramLink?: string
+  twitterLink?: string
+  redditLink?: string
+  youtubeLink?: string
+  instagramLink?: string
+  facebookLink?: string
+  linkedinLink?: string
+  wikipediaLink?: string
+  githubLink?: string
+  nostrNpub?: string
+  sessionName?: string
+  matrixName?: string
+  lensName?: string
+  hiveName?: string
+  pushName?: string
+  mirrorName?: string
+  telegramName?: string
+  twitterName?: string
+  redditName?: string
+  signalNumber?: string
+  whatsappNumber?: string
+  xmppName?: string
+  uniswapLink?: string
+  sushiswapLink?: string
+  etherscanLink?: string
+  ethvmLink?: string
+  coingeckoLink?: string
+  coinmarketcapLink?: string
+  dextoolsLink?: string
+  dexscreenerLink?: string
+  birdeyeLink?: string
+  geckoterminalLink?: string
+  extraContactInfo?: string
+}
+
+export type AppConfigKeyString =
+  | "apiUrl"
+  | "anotherWebsiteLink"
+  | "ipfsLink"
+  | "torLink"
+  | "ipfsHttpGatewayLink"
+  | "nostrLink"
+  | "sessionLink"
+  | "simplexLink"
+  | "statusLink"
+  | "lensLink"
+  | "hiveLink"
+  | "pushLink"
+  | "mirrorLink"
+  | "mastodonLink"
+  | "matrixLink"
+  | "discordLink"
+  | "telegramLink"
+  | "twitterLink"
+  | "redditLink"
+  | "youtubeLink"
+  | "instagramLink"
+  | "facebookLink"
+  | "linkedinLink"
+  | "wikipediaLink"
+  | "githubLink"
+  | "nostrNpub"
+  | "sessionName"
+  | "matrixName"
+  | "lensName"
+  | "hiveName"
+  | "pushName"
+  | "mirrorName"
+  | "telegramName"
+  | "twitterName"
+  | "redditName"
+  | "signalNumber"
+  | "whatsappNumber"
+  | "xmppName"
+  | "uniswapLink"
+  | "sushiswapLink"
+  | "etherscanLink"
+  | "ethvmLink"
+  | "coingeckoLink"
+  | "coinmarketcapLink"
+  | "dextoolsLink"
+  | "dexscreenerLink"
+  | "birdeyeLink"
+  | "geckoterminalLink"
+  | "extraContactInfo"
+
+export type AppConfigKeyBoolean =
+  | "enableAppConfigChanges"
+  | "enableAppConfigChangesByAdmin"
+  | "enableAdmin"
+  | "admins"
+  | "allowNewEventsWithoutSignature"
+  | "enableNewWeb3ActionsAll"
+  | "enableNewWeb3ActionsPost"
+  | "enableNewWeb3ActionsReply"
+  | "enableNewWeb3ActionsReact"
+  | "enableNewWeb3ActionsModerate"
+  | "enableNewWeb3ActionsAll"
+  | "enableNewWeb3ActionsPost"
+  | "enableNewWeb3ActionsReact"
+  | "enableNewWeb3ActionsReply"
+  | "enableNewWeb3ActionsModerate"
+  | "enableNewNostrActionsAll"
+  | "enableNewEthereumActionsAll"
+  | "enableModeration"
+  | "enableShortUrlsForWeb3Actions"
+  | "shortUrlsLengthOfWeb3Ids"
+  | "enableWhitelistForActionPost"
+  | "enableWhitelistForActionReply"
+  | "enableWhitelistForActionReact"
+  | "feedFiltersActivityHot"
+  | "feedFiltersActivityRising"
+  | "enableSpasmModule"
+  | "enableSpasmSourcesUpdates"
+  | "enableRssModule"
+  | "enableRssSourcesUpdates"
+  | "ignoreWhitelistForActionPostInSpasmModule"
+  | "ignoreWhitelistForActionReactInSpasmModule"
+  | "ignoreWhitelistForActionReplyInSpasmModul"
+
+export type AppConfigKeyArray =
+  | "moderators"
+  | "whitelistedForActionPost"
+  | "whitelistedForActionReply"
+  | "whitelistedForActionReact"
+
+export type AppConfigKeyNumber =
+  | "shortUrlsLengthOfWeb3Ids"
+  | "feedFiltersActivityHot"
+  | "feedFiltersActivityRising"
+
 ////////////////
 // Filters V2
 export interface FeedFiltersV2 {
@@ -791,35 +963,62 @@ export class ConfigForSubmitSpasmEvent {
     enabled: boolean,
     list: string[]
   }
-  constructor() {
+  admin: {
+    enabled: boolean,
+    list: string[]
+  }
+  appConfig: {
+    changes: {
+      allowed: boolean
+      allowedByAdmin: boolean
+    }
+
+  }
+  constructor(settings = env) {
     this.htmlTags = { allowed: false }
-    this.eventsWithoutSignature = { allowed: allowNewEventsWithoutSignature }
+    this.eventsWithoutSignature = { allowed: settings.allowNewEventsWithoutSignature }
     this.web3 = {
       signature: {
-        ethereum: { enabled: enableNewEthereumActionsAll },
-        nostr: { enabled: enableNewNostrActionsAll }
+        ethereum: { enabled: settings.enableNewEthereumActionsAll },
+        nostr: { enabled: settings.enableNewNostrActionsAll }
       },
       action: {
-        all: { enabled: enableNewWeb3ActionsAll },
-        post: { enabled: enableNewWeb3ActionsPost },
-        react: { enabled: enableNewWeb3ActionsReact },
-        reply: { enabled: enableNewWeb3ActionsReply },
-        moderate: { enabled: enableNewWeb3ActionsModerate },
+        all: { enabled: settings.enableNewWeb3ActionsAll },
+        post: { enabled: settings.enableNewWeb3ActionsPost },
+        react: { enabled: settings.enableNewWeb3ActionsReact },
+        reply: { enabled: settings.enableNewWeb3ActionsReply },
+        moderate: { enabled: settings.enableNewWeb3ActionsModerate },
       },
     },
     this.whitelist = {
       action: {
         post: {
-          enabled: enableWhitelistForActionPost,
-          list: whitelistedForActionPost
+          enabled: settings.enableWhitelistForActionPost,
+          list: settings.whitelistedForActionPost
         },
-        react: { enabled: false, list: [] },
-        reply: { enabled: false, list: [] },
+        react: {
+          enabled: settings.enableWhitelistForActionReact,
+          list: settings.whitelistedForActionReact
+        },
+        reply: {
+          enabled: settings.enableWhitelistForActionReply,
+          list: settings.whitelistedForActionReply
+        },
       }
     },
     this.moderation = {
-      enabled: enableModeration,
-      list: moderators
+      enabled: settings.enableModeration,
+      list: settings.moderators
+    },
+    this.admin = {
+      enabled: settings.enableAdmin,
+      list: settings.admins
+    },
+    this.appConfig = {
+      changes: {
+        allowed: settings.enableAppConfigChanges,
+        allowedByAdmin: settings.enableAppConfigChangesByAdmin
+      }
     }
   }
 }
@@ -1363,7 +1562,7 @@ export interface SpasmEventProofV2 {
 
 export type EventSignatureProtocol = "ethereum" | "nostr"
 
-export type SpasmEventActionV2 = "post" | "react" | "reply" | "share" | "shared" | "moderate" | "admin" | "edit" | "delete" | "vote" | "media" | "metadata" | "follow_list" | "direct_message"
+export type SpasmEventActionV2 = "post" | "react" | "reply" | "share" | "shared" | "moderate" | "admin" | "edit" | "delete" | "vote" | "media" | "metadata" | "follow_list" | "direct_message" | "app-config-dr"
 
 export type SpasmEventLicense = "MIT" | "CC0" | "CC0-1.0" | "SPDX-License-Identifier: CC0-1.0" | "SPDX-License-Identifier: MIT"
 

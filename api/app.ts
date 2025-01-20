@@ -10,9 +10,9 @@ import { fetchTargetActionsByCounting } from "../helper/sql/fetchTargetActionsBy
 import { fetchTargetComments } from "../helper/sql/fetchTargetComments";
 import { fetchLatestComments } from "../helper/sql/fetchLatestComments";
 import { fetchFullIdsFromShortId } from "../helper/sql/fetchFullIdsFromShortId";
-import { submitAction } from "../helper/sql/submitAction";
+// import { submitAction } from "../helper/sql/submitAction";
 // import { fetchPostsFromRssSources } from "../helper/rss/fetchPostsFromRssSources";
-import { QueryFeedFilters, FeedFilters, QueryFeedFiltersV2, FeedFiltersV2, SpasmEventEnvelopeV2, SpasmEventV2 } from "../types/interfaces";
+import { QueryFeedFilters, FeedFilters, QueryFeedFiltersV2, FeedFiltersV2, SpasmEventEnvelopeV2, SpasmEventV2, AppConfig } from "../types/interfaces";
 import {
   isArrayWithValues, isObjectWithValues,
   isStringOrNumber, isValidUrl
@@ -23,15 +23,12 @@ import {
   fetchAllSpasmEventsV2ByFilter,
   fetchSpasmEventV2ById,
   fetchSpasmEventV2ByShortId,
-  fetchAllSpasmEventsV2BySigner
+  fetchAllSpasmEventsV2BySigner,
+  fetchAppConfig
 } from "../helper/sql/sqlUtils";
 import {poolDefault} from "../db";
-import { env } from "./../appConfig";
+import { env, loadAppConfig } from "./../appConfig";
 import {toBeHex} from "../helper/utils/nostrUtils";
-const {
-  enableShortUrlsForWeb3Actions,
-  shortUrlsLengthOfWeb3Ids,
-} = env
 
 const { spasm } = require('spasm.js');
 
@@ -251,7 +248,7 @@ app.post("/api/submit/", async (req: Request, res: Response) => {
 
   // TODO delete after full transition to V2
   // Submit V0/V1
-  if (!("type" in event)) { await submitAction(req.body) }
+  // if (!("type" in event)) { await submitAction(req.body) }
 
   return res.json(submitResult);
 });
@@ -342,8 +339,8 @@ app.get("/api/events/:id", async(req: Request, res: Response) => {
     if (id && isStringOrNumber(id)) {
       let event: SpasmEventV2 | null = null
       if (
-        enableShortUrlsForWeb3Actions &&
-        String(id).length === shortUrlsLengthOfWeb3Ids &&
+        env?.enableShortUrlsForWeb3Actions &&
+        String(id).length === env?.shortUrlsLengthOfWeb3Ids &&
         !isValidUrl(id)
       ) {
         event = await fetchSpasmEventV2ByShortId(id)
@@ -402,10 +399,24 @@ app.get("/api/events/:id", async(req: Request, res: Response) => {
   }
 })
 
+app.get("/api/app-config", async(_: Request, res: Response) => {
+  const appConfig: AppConfig = await fetchAppConfig()
+  if (
+    !appConfig || typeof(appConfig) !== "object" ||
+    Array.isArray(appConfig)
+  ) {
+    res.json({})
+  } else {
+    res.json(appConfig)
+  }
+})
+
 let server;
 
 export const startServer = (port: string | number) => {
-  server = app.listen(port, () => {
+  server = app.listen(port, async () => {
+    // Load the latest app config from database upon launch
+    await loadAppConfig()
     console.log(`The app is listening at http://localhost:${port}`);
   });
 };

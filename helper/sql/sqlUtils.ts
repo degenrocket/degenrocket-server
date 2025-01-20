@@ -1,6 +1,6 @@
 import { poolDefault, poolTest } from "../../db";
 import {
-  // SpasmEventV2,
+  AppConfig,
   SpasmEventDatabaseV2,
   SpasmEventIdFormatNameV2,
   SpasmEventV2,
@@ -37,8 +37,9 @@ export const insertSpasmEventV2 = async (
   dirtyDbTable = "spasm_events"
 ): Promise<boolean> => {
   if (!isObjectWithValues(unknownEvent)) return false
-
-  const dbTable = DOMPurify.sanitize(dirtyDbTable)
+  const defaultDbTable = "spasm_events"
+  const dbTable =
+    DOMPurify.sanitize(dirtyDbTable) || defaultDbTable
 
   // SpasmEventDatabaseV2
   let spasmEventDatabaseV2: SpasmEventDatabaseV2 | null = null
@@ -1046,7 +1047,7 @@ export const isReactionDuplicate = async (
 
     const verifiedSigners: (string | number)[] =
       spasm.getVerifiedSigners(spasmEventV2)
-      console.log("verifiedSigners:", verifiedSigners)
+      // console.log("verifiedSigners:", verifiedSigners)
 
     if (
       !verifiedSigners ||
@@ -1754,12 +1755,49 @@ export const incrementStatsV2ForThisEvent = async (
   // `;
 }
 
+export const fetchAppConfig = async (
+): Promise<AppConfig | null> => {
+  const filters: FeedFiltersV2 = {
+    action: "app-config-dr",
+    limit: 1
+  }
+  const spasmEvents: SpasmEventV2[] =
+    await fetchAllAppConfigsByFilters(filters)
+  if (!spasmEvents) return null
+  if (!isArrayWithValues(spasmEvents)) return null
+  if (!spasmEvents[0]) return null
+  const spasmEvent: SpasmEventV2 = spasmEvents[0]
+  const isAnySignerAdmin =
+    spasm.isAnySignerListedIn(spasmEvent, env.admins)
+  if (!isAnySignerAdmin) {
+    console.error("ERROR: a signer of an app config event from the database is not an admin, so config is rejected. That's unusual. There are at least three different explanations: (1) you didn't update your app config after changing admins, (2) you didn't set admins after restoring a database backup, (3) a malicious actor was able to submit an app config from a non-admin address. Make sure that admins are properly set in the .env file, restart the app, and try to update your app config.")
+    return null
+  }
+  if (!('content' in spasmEvent)) return null
+  if (!spasmEvent.content) return null
+  if (typeof(spasmEvent.content) !== "string") return null
+  const appConfig = JSON.parse(spasmEvent.content)
+  if (!appConfig) return null
+  if (typeof(appConfig) !== "object") return null
+  return appConfig
+}
+
+export const fetchAllAppConfigsByFilters = async (
+  filters: FeedFiltersV2,
+  pool = poolDefault,
+  dirtyDbTable = "app_configs"
+): Promise<SpasmEventV2[] | null> => {
+  return await fetchAllSpasmEventsV2ByFilter(
+    filters, pool, dirtyDbTable
+  )
+}
+
 export const fetchAllSpasmEventsV2ByFilter = async (
   filters: FeedFiltersV2,
   pool = poolDefault,
   dirtyDbTable = "spasm_events"
 ): Promise<SpasmEventV2[] | null> => {
-  console.log("filters:", filters)
+  // console.log("filters:", filters)
   let limit = 20
   const maxLimit = 300
   // spasm.sanitizeEvent() can sanitize any object/array

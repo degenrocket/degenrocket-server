@@ -10,7 +10,8 @@ import {
   hasCommonValuesInArrays,
   ifEventContainsHtmlTags,
   mergeConfigsForSubmitSpasmEvent,
-  // executeFunctionForAllNestedValuesOfType,
+  splitStringIntoArrayOfStrings,
+  splitIntoArray,
 } from './utils';
 const { spasm } = require('spasm.js');
 
@@ -378,9 +379,8 @@ describe("ifEventContainsHtmlTags() tests", () => {
   });
 });
 
-// template()
-describe("template() function tests", () => {
-  test("should return true if passed true", async () => {
+describe("mergeConfigsForSubmitSpasmEvent() tests", () => {
+  test("should merge configs", async () => {
     const defaultConfig = new ConfigForSubmitSpasmEvent()
     const customConfig = new ConfigForSubmitSpasmEvent()
     customConfig.web3.signature.ethereum.enabled = false
@@ -392,6 +392,29 @@ describe("template() function tests", () => {
     output.web3.signature.ethereum.enabled = false
 
     expect(input).toEqual(output);
+  });
+});
+
+// splitStringIntoArrayOfStrings
+describe("splitStringIntoArrayOfStrings() tests", () => {
+  test("should return true if passed true", async () => {
+    const input = "one, two,three, four . five , six  "
+    const output1 = ["one","two","three","four . five","six" ]
+    const output2 = ["one, two,three, four","five , six" ]
+    const output3 = ["one"," two","three"," four . five "," six  "]
+    expect(splitStringIntoArrayOfStrings(input))
+      .toStrictEqual(output1);
+    expect(splitStringIntoArrayOfStrings(input, '.'))
+      .toStrictEqual(output2);
+    expect(splitStringIntoArrayOfStrings(input, ',', false))
+      .toStrictEqual(output3);
+    // aliases
+    expect(splitIntoArray(input))
+      .toStrictEqual(output1);
+    expect(splitIntoArray(input, '.'))
+      .toStrictEqual(output2);
+    expect(splitIntoArray(input, ',', false))
+      .toStrictEqual(output3);
   });
 });
 

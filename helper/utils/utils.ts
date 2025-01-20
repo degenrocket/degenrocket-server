@@ -478,6 +478,26 @@ export const mergeConfigsForSubmitSpasmEvent = (
   return newConfig as ConfigForSubmitSpasmEvent
 }
 
+export const splitStringIntoArrayOfStrings = (
+  value: string,
+  separator: string = ',',
+  ifTrim: boolean = true
+): string[] => {
+  const array: string[] = []
+  if (!value || typeof(value) !== "string") { return array }
+  const dirtyArray: string[] =
+    value.toLowerCase().split(separator)
+  dirtyArray.forEach(el => {
+    if (el && typeof(el) === "string") {
+      // Remove whitespace
+      if (ifTrim) {array.push(el.trim())} else {array.push(el)}
+    }
+  })
+  return array
+}
+
+export const splitIntoArray = splitStringIntoArrayOfStrings
+
 // The Set data structure only stores unique values.
 // When the array is converted into a Set, any duplicate values
 // are automatically removed. Then, the spread operator (...)

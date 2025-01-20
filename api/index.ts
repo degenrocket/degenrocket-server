@@ -31,6 +31,9 @@ if (process.env.NODE_ENV !== "dev") {
 
 startServer(port)
 
+// TODO may be move bree into startServer because the function
+// is async due to loading app config from database, but it
+// doesn't have 'await'.
 let breeJobs = []
 
 if (enableRssModule && enableRssSourcesUpdates) {
