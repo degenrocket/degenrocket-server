@@ -5,8 +5,6 @@ import cors from "cors";
 import { fetchAllPosts } from "../helper/sql/fetchAllPosts";
 import { fetchPostById } from "../helper/sql/fetchPostById";
 // import { fetchPostsByAuthor } from "../helper/sql/fetchPostsByAuthor";
-import { fetchAllActionsByCounting } from "../helper/sql/fetchAllActionsByCounting";
-import { fetchTargetActionsByCounting } from "../helper/sql/fetchTargetActionsByCounting";
 import { fetchTargetComments } from "../helper/sql/fetchTargetComments";
 import { fetchLatestComments } from "../helper/sql/fetchLatestComments";
 import { fetchFullIdsFromShortId } from "../helper/sql/fetchFullIdsFromShortId";
@@ -24,7 +22,8 @@ import {
   fetchSpasmEventV2ById,
   fetchSpasmEventV2ByShortId,
   fetchAllSpasmEventsV2BySigner,
-  fetchAppConfig
+  fetchAppConfig,
+  fetchAllSpasmEventsV2ByParentIds
 } from "../helper/sql/sqlUtils";
 import {poolDefault} from "../db";
 import { env, loadAppConfig } from "./../appConfig";
@@ -127,34 +126,6 @@ app.get("/api/posts/:id", async(req: Request, res: Response) => {
   }
 })
 
-// Deprecated.
-// Don't delete, because it can be used to re-calculate actions_count table.
-// Although, it doesn't work now. Check the query.
-// Fetch combined table of different actions (bullish, bearish, important, comments) for all targets
-app.get("/api/posts/actions", async(_: Request, res: Response) => {
-  console.log("/api/posts/actions called") 
-  try {
-    const allReactions = await fetchAllActionsByCounting()
-    res.json(allReactions);
-  } catch (err) {
-    console.error(err);
-  }
-})
-
-// Fetch how many reactions a target has
-app.get("/api/posts/actions/:id", async(req: Request, res: Response) => {
-  const target = req.query.target;
-  console.log(`/api/posts/reactions/:id called with target: ${target}`) 
-  console.log("query:", req.query);
-
-  try {
-    const allActionsForOnePost = await fetchTargetActionsByCounting(target)
-    res.json(allActionsForOnePost);
-  } catch (err) {
-    console.error(err);
-  }
-})
-
 // Fetch latest comments
 app.get("/api/comments/", async(req: Request, res: Response) => {
   console.log("/api/comments/ called") 
@@ -206,6 +177,67 @@ app.get("/api/authors/:id", async(req: Request, res: Response) => {
           spasm.convertManyToSpasmEventEnvelope(spasmEvents)
 
         // Convert all SpasmEvent to SpasmEventEnvelope
+        if (isArrayWithValues(spasmEventEnvelopes)) {
+          setTimeout(() => {res.json(spasmEventEnvelopes)}, 200)
+        } else {
+          setTimeout(() => {res.json(null)}, 200)
+        }
+      } else {
+        setTimeout(() => {res.json(null)}, 200)
+      }
+    }
+  } catch (err) {
+    console.error(err);
+    res.json(err);
+  }
+})
+
+// Fetch all children of parent events
+// Examples:
+// /api/events/children/search?id=abc123
+// /api/events/children/search?id=abc123&id=xyz
+// /api/events/children/search?id=abc123&id=xyz&action=any
+// /api/events/children/search?id=abc123&id=xyz&action=reply
+// /api/events/children/search?id=abc123&action=reply&action=react
+app.get("/api/events/children/:id", async(
+  req: Request, res: Response
+) => {
+  try {
+    if (req?.query?.id) {
+      const action = req?.query?.action
+      const actions = Array.isArray(action) ? action : [action]
+      const actionsStrings: string[] = []
+      actions.forEach(action => {
+        if (String(action)) {actionsStrings.push(String(action))}
+      })
+
+      const id = req?.query?.id
+      const ids = Array.isArray(id) ? id : [id]
+      const idsStrings: string[] = []
+      ids.forEach(id => {
+        if (String(id)) { idsStrings.push(String(id)) }
+      })
+      const spasmEventsFinal: SpasmEventV2[] = []
+
+      for (const actionStr of actionsStrings) {
+        const spasmEvents =
+          await fetchAllSpasmEventsV2ByParentIds(
+            idsStrings, poolDefault, actionStr, "spasm_events"
+          )
+        if (isArrayWithValues(spasmEvents)) {
+          spasmEvents.forEach(spasmEvent => {
+            spasm.appendToArrayIfEventIsUnique(
+              spasmEventsFinal, spasmEvent
+            )
+          })
+        }
+      }
+
+      if (isArrayWithValues(spasmEventsFinal)) {
+        // Convert all SpasmEvent to SpasmEventEnvelope
+        const spasmEventEnvelopes: SpasmEventEnvelopeV2[] =
+          spasm.convertManyToSpasmEventEnvelope(spasmEventsFinal)
+
         if (isArrayWithValues(spasmEventEnvelopes)) {
           setTimeout(() => {res.json(spasmEventEnvelopes)}, 200)
         } else {

@@ -51,11 +51,14 @@ export const hasValue = (el?: any) => {
   // Recursively check for at least one value inside an array
   if (Array.isArray(el) && el?.length) {
     let hasAtLeastOneValue: boolean = false
-    el.forEach(function (e) {
+    // For of is used instead of forEach to break from
+    // the loop once at least one element has value.
+    for (const e of el) {
       if (hasValue(e)) {
         hasAtLeastOneValue = true
+        break
       }
-    })
+    }
 
     if (hasAtLeastOneValue) {
       return true
