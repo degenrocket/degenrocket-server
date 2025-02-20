@@ -158,6 +158,122 @@ export const toBeString = (input: any): string => {
   return ''; // Fallback for cases not covered by the switch
 }
 
+/**
+ * Converts value to a consistent timestamp across all platforms.
+ * Input time value can be string, number, or Date object.
+ * returns Consistent timestamp in milliseconds or undefined.
+ */
+export const toBeTimestamp = (
+  originalTime: any
+): number | undefined => {
+  if (!originalTime) return undefined
+  let time = Number(originalTime)
+    ? Number(originalTime)
+    : originalTime
+
+  // First, normalize the input to a Date object
+  let date: Date
+
+  // Handle numeric inputs (timestamps or years)
+  if (
+    typeof time === 'number' &&
+    !isNaN(time) &&
+    Number.isSafeInteger(time)
+  ) {
+    date = new Date(time);
+    
+    if (!isValidDate(date)) {
+      return undefined
+    }
+  } 
+  // Handle string inputs
+  else if (typeof time === 'string') {
+    try {
+      // Try parsing with timezone specification
+      date = new Date(`${time} GMT`)
+      
+      // Fallback to standard parsing if needed
+      if (!isValidDate(date)) {
+        date = new Date(time)
+        if (!isValidDate(date)) {
+          return undefined
+        }
+      }
+    } catch (err) {
+      return undefined
+    }
+  } 
+  // Handle Date objects
+  else if (time instanceof Date) {
+    date = time
+    
+    if (!isValidDate(date)) {
+      return undefined
+    }
+  } 
+  // Invalid input type
+  else {
+    return undefined
+  }
+
+  // Always use UTC for consistency
+  return isValidDate(date) ? date.getTime() : undefined
+}
+
+// Nostr relays only accept 10 digits long timestamps
+export const toBeShortTimestamp = (
+  value: string | number
+): number | undefined => {
+  if (!value || !isStringOrNumber) return undefined
+  let timestamp = toBeTimestamp(value)
+  if (!timestamp) return undefined
+  if (String(timestamp) && String(timestamp).length === 13) {
+    const str = String(timestamp)
+    if (str && str.slice(0,10)) {
+      const shortStr = str.slice(0,10)
+      if (Number(shortStr)) { return Number(shortStr) }
+    }
+  } else if (
+    String(timestamp) && String(timestamp).length === 10
+  ) { return timestamp }
+  return undefined
+}
+
+export const toBeLongTimestamp = (
+  value: string | number
+): number | null => {
+  if (!value || !isStringOrNumber) return null
+  let timestamp = toBeTimestamp(value)
+  if (!timestamp) return null
+  // Some timestamps are 10 digits long, so we
+  // need to standardize them to 13 digits
+  if (String(timestamp) && String(timestamp).length === 10) {
+    timestamp = timestamp * 1000;
+  }
+  if (
+    timestamp && typeof(timestamp) === "number" &&
+    String(timestamp) && String(timestamp).length >= 13
+  ) {
+    return timestamp
+  } else {
+    return null
+  }
+}
+
+export const toBeFullTimestamp = toBeLongTimestamp
+export const toBeStandardizedTimestamp = toBeShortTimestamp
+export const toBeStandardTimestamp = toBeShortTimestamp
+export const toBeNostrTimestamp = toBeShortTimestamp
+
+const isValidDate = (date: Date): boolean => {
+  return (
+    date instanceof Date &&
+    !isNaN(date.getTime()) &&
+    Number.isFinite(date.getTime())
+  )
+}
+
+/*
 export const toBeTimestamp = (time: any): number | undefined => {
  const date = new Date(time);
  const timestamp = date.getTime();
@@ -176,6 +292,7 @@ export const toBeTimestamp = (time: any): number | undefined => {
 
  return timestamp;
 };
+*/
 
 export const isValidUrl = (value?: any): boolean => {
   if (!value) return false
