@@ -2,6 +2,8 @@
 
 DegenRocket-server is a backend for a web3 decentralized social media with native support for Degen Messaging Protocol (DMP).
 
+DegenRocket-web repository can be found [here](https://github.com/degenrocket/degenrocket-web).
+
 ## Server setup
 
 If you don't have any experience at setting up a server, then there is a beginner-friendly guide with scripts for an automated [initial server setup](https://github.com/degenrocket/degenrocket-scripts).
@@ -43,8 +45,14 @@ Note: skip lines `CREATE DATABASE spasm_database;` and `CREATE DATABASE spasm_da
 ```
 sudo su - postgres
 psql -h localhost -d spasm_database -U dbuser -p 5432
-CREATE TABLE IF NOT EXISTS posts(
-id SERIAL NOT NULL,
+DO $$
+BEGIN
+    -- V1
+    IF NOT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'posts'
+    ) THEN
+        CREATE TABLE posts (
 ...
 ```
 
@@ -61,6 +69,12 @@ ALTER USER your_username CREATEDB;
 Once your database user has a privilege to create new databases, you can run scripts `npm run initialize-db` or `npm run migrate` again.
 
 ### Tables
+
+##### Tables V2
+
+Table `spasm_events` contains all signed user-generated events and unsigned web2 posts (RSS).
+
+##### Tables V1
 
 Table `posts` contains web2 posts (not signed with any private key), usually fetched from RSS sources.
 
