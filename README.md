@@ -104,6 +104,21 @@ nvm use 18
 npm install
 ```
 
+---
+
+## Download the app
+
+Download the app from the Github into the `backend/` folder.
+
+*Note: the app should already be downloaded if you've used scripts for an automated [initial server setup](https://github.com/degenrocket/degenrocket-scripts).*
+
+```
+git clone https://github.com/degenrocket/degenrocket-server.git backend/
+cd backend/
+```
+
+---
+
 ## Environment
 
 Create default `.env` file, see example `.env.example`.
@@ -114,9 +129,21 @@ cp .env.example .env
 
 ## Test locally
 
+Install npm packages in the backend folder.
+
+```
+npm install
+```
+
+Start the app.
+
 ```
 npm run dev
 ```
+
+Open a browser and test API at `localhost:5000/api/events`.
+
+*Note: You should get `null` or empty array `[]` if your database is empty*
 
 ## Run production
 
