@@ -172,5 +172,33 @@ The current git version doesn't include the RSS module. It might be added in the
 
 ## Troubleshooting
 
+#### Database permission denied
+
+If you get `permission denied` errors accessing your database like:
+
+```
+error: permission denied for table app_configs
+error: permission denied for table spasm_events
+insertSpasmEventV2 failed error: permission denied for sequence spasm_events_db_key_seq
+```
+
+Then execute the following commands:
+
+```
+sudo su - postgres
+psql
+```
+
+```
+-- First, grant permissions on all existing sequences
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO dbuser;
+-- Then, set default permissions for future sequences
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO dbuser;
+-- Grant privileges on all sequences in the schema
+GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO dbuser;
+```
+
+## Contact
+
 Send a message to `degenrocket` on [Session](https://getsession.org) if you need any help.
 
