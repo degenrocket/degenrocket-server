@@ -202,6 +202,7 @@ export const updateAppConfig = async (
   updateString("matrixName")
   updateString("lensName")
   updateString("farcasterName")
+  updateString("blueskyName")
   updateString("hiveName")
   updateString("pushName")
   updateString("mirrorName")
