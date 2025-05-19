@@ -1,7 +1,7 @@
 import {
   howManyEntriesInTable
 } from '../../db/dbUtils';
-import {copyOf, copyWithoutDbStats, isObjectWithValues, withoutDbStats} from '../utils/utils';
+import {copyOf, copyWithoutDbStats, isObjectWithValues } from '../utils/utils';
 import {
   moderateDeleteValidDmpReply,
   moderateDeleteValidDmpReplyConvertedToSpasmEventV2,
@@ -16,7 +16,6 @@ import {
   validDmpReactionDownvoteSignedClosedDuplicate,
   validDmpReactionUpvote,
   validDmpReactionUpvoteDiffParentSignedClosed,
-  // validDmpReactionUpvoteDiffParentSignedClosedConvertedToSpasmEventV2,
   validDmpReactionUpvoteDiffSignerSignedClosed,
   validDmpReactionUpvoteDiffSignerSignedClosedConvertedToSpasmEventV2,
   validDmpReactionUpvoteSignedClosed,
@@ -28,7 +27,6 @@ import {
   validDmpReplySignedClosed,
   validDmpReplySignedClosedDuplicate,
   validSpasmEventRssItemV0ConvertedToSpasmV2,
-  validDmpReply,
   validPostWithNostrReplyToDmpEventConvertedToSpasmV2,
   validSpasmWithDmpReplyToDmpEventV0ConvertedToSpasmEventV2,
   validDmpEventSignedClosedConvertedToSpasmV2WithTwoChildren,

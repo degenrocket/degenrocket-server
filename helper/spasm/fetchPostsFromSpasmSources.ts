@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import axios, { AxiosResponse } from 'axios';
 import { SpasmSource, Post, IgnoreWhitelistFor, ConfigForSubmitSpasmEvent } from "../../types/interfaces";
-import { submitAction } from "../sql/submitAction";
 import {submitSpasmEvent} from '../sql/submitSpasmEvent';
 import {poolDefault} from '../../db';
 import {env} from "./../../appConfig"
@@ -138,19 +137,11 @@ export const fetchPostsFromSpasmSources = async (frequency?: string) => {
             customConfig.whitelist.action.reply.enabled = false
           }
           return submitSpasmEvent(post, poolDefault, customConfig)
-
-          // Deprecated
-          // Submit V0/V1
-          // return submitAction(
-          //   { unknownEvent: post },
-          //   ignoreWhitelistFor
-          // )
         }))
       } else {
         console.log("data for submitAction is null")
       }
     } catch (err) {
-      // console.error('getData failed for source:', source, 'with error message:', err);
       console.error('getData failed for source.apiUrl:', source.apiUrl, 'at', time, ', error message is hidden');
     }
   };

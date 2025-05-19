@@ -4,12 +4,9 @@ import dotenv from "dotenv";
 import cors from "cors";
 import { fetchAllPosts } from "../helper/sql/fetchAllPosts";
 import { fetchPostById } from "../helper/sql/fetchPostById";
-// import { fetchPostsByAuthor } from "../helper/sql/fetchPostsByAuthor";
 import { fetchTargetComments } from "../helper/sql/fetchTargetComments";
 import { fetchLatestComments } from "../helper/sql/fetchLatestComments";
 import { fetchFullIdsFromShortId } from "../helper/sql/fetchFullIdsFromShortId";
-// import { submitAction } from "../helper/sql/submitAction";
-// import { fetchPostsFromRssSources } from "../helper/rss/fetchPostsFromRssSources";
 import { QueryFeedFilters, FeedFilters, QueryFeedFiltersV2, FeedFiltersV2, SpasmEventEnvelopeV2, SpasmEventV2, AppConfig } from "../types/interfaces";
 import {
   isArrayWithValues, isObjectWithValues,
@@ -34,7 +31,6 @@ const { spasm } = require('spasm.js');
 dotenv.config();
 
 const app: Express = express();
-// const app = express();
 
 // Override console.log for production
 console.log(`NODE_ENV=${process.env.NODE_ENV}`)
@@ -55,7 +51,6 @@ app.use(express.json()) // => req.body
 // Examples:
 // "/api/posts?webType=web3&category=any&platform=false&source=false&activity=hot&keyword=false&ticker=false&limitWeb2=0&limitWeb3=10",
 app.get("/api/posts", async(req: Request, res: Response) => {
-  // res.json([{id: 1, title: "Great"}])
   const q: QueryFeedFilters = req.query
   const filters: FeedFilters = {
     webType: q.webType && q.webType !== 'false' ? q.webType : null,
