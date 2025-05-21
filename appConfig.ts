@@ -181,6 +181,7 @@ export const updateAppConfig = async (
   updateString("statusLink")
   updateString("lensLink")
   updateString("farcasterLink")
+  updateString("blueskyLink")
   updateString("hiveLink")
   updateString("pushLink")
   updateString("mirrorLink")

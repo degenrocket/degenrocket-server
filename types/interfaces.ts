@@ -772,6 +772,7 @@ export interface AppConfig {
   statusLink?: string
   lensLink?: string
   farcasterLink?: string
+  blueskyLink?: string
   hiveLink?: string
   pushLink?: string
   mirrorLink?: string
@@ -827,6 +828,7 @@ export type AppConfigKeyString =
   | "statusLink"
   | "lensLink"
   | "farcasterLink"
+  | "blueskyLink"
   | "hiveLink"
   | "pushLink"
   | "mirrorLink"
