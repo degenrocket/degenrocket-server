@@ -12,6 +12,9 @@ import {
   mergeConfigsForSubmitSpasmEvent,
   splitStringIntoArrayOfStrings,
   splitIntoArray,
+  toBeTimestamp,
+  toBeLongTimestamp,
+  toBeShortTimestamp,
 } from './utils';
 const { spasm } = require('spasm.js');
 
@@ -52,6 +55,25 @@ describe('toBeString function', () => {
     expect(toBeString({})).toBe('{}');
   });
 });
+
+describe('toBeTimestamp functions', () => {
+  test('converts to any, long, and short timestamps', () => {
+    expect(toBeTimestamp("2022-01-01T22:04:46.178Z")).toBe(1641074686178);
+    expect(toBeTimestamp("1641074686178")).toBe(1641074686178);
+    expect(toBeTimestamp(1641074686178)).toBe(1641074686178);
+    expect(toBeTimestamp("1641074686")).toBe(1641074686);
+    expect(toBeTimestamp(1641074686)).toBe(1641074686);
+
+    expect(toBeLongTimestamp("2022-01-01T22:04:46.178Z")).toBe(1641074686178);
+    expect(toBeLongTimestamp("1641074686")).toBe(1641074686000);
+    expect(toBeLongTimestamp(1641074686)).toBe(1641074686000);
+
+    expect(toBeShortTimestamp("2022-01-01T22:04:46.178Z")).toBe(1641074686);
+    expect(toBeShortTimestamp("1641074686178")).toBe(1641074686);
+    expect(toBeShortTimestamp(1641074686178)).toBe(1641074686);
+  });
+});
+
 
 // containsHtmlTags()
 describe("containsHtmlTags() function tests", () => {
