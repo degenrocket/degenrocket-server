@@ -1950,8 +1950,8 @@ export const fetchAllSpasmEventsV2ByFilter = async (
       LIMIT COALESCE($1, 20)
     `
 
-    console.log("sqlQuery:", sqlQuery)
-    console.log("params:", params)
+    // console.log("sqlQuery:", sqlQuery)
+    // console.log("params:", params)
     // console.log("conditions:", conditions)
 
     const events = await pool.query(sqlQuery, params)

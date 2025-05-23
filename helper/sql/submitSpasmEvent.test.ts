@@ -571,7 +571,7 @@ describe("multiple moderation tests for submitSpasmEvent", () => {
     customConfig.moderation.list.push(
       "b3a706bcceb39f193da553ce76255dd6ba5b097001c8ef85ff1b92e994894c81"
     )
-    console.log("customConfig.moderation.list:", customConfig.moderation.list)
+    // console.log("customConfig.moderation.list:", customConfig.moderation.list)
     expect(await submitSpasmEvent(
       moderateDeleteValidDmpReply,
       poolTest,

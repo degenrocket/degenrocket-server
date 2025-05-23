@@ -158,7 +158,7 @@ export const submitSpasmEvent = async (
       !config.htmlTags.allowed &&
       ifEventContainsHtmlTags(spasmEvent)
     ) {
-      console.log("ERROR: HTML tags were detected")
+      // console.log("ERROR: HTML tags were detected")
       return "ERROR: HTML tags are not allowed. You may consider using markdown instead if this instance supports markdown."
     }
 
@@ -395,7 +395,7 @@ export const submitSpasmEvent = async (
         spasm.isAnySignerListedIn(
           spasmEvent, config.moderation.list
       )
-      console.log("isAnySignerModerator:", isAnySignerModerator)
+      // console.log("isAnySignerModerator:", isAnySignerModerator)
       if (!isAnySignerModerator) {
         return "ERROR: you're not a moderator"
       }
@@ -411,7 +411,7 @@ export const submitSpasmEvent = async (
       const deleteSuccess = await deleteSpasmEventsV2FromDbByIds(
         spasm.getAllParentIds(spasmEvent), pool
       )
-        console.log("deleteSuccess:", deleteSuccess)
+        // console.log("deleteSuccess:", deleteSuccess)
 
       return deleteSuccess
         ? "Success. Action saved and target deleted"
