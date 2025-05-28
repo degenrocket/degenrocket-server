@@ -15,6 +15,7 @@ import {
   toBeTimestamp,
   toBeLongTimestamp,
   toBeShortTimestamp,
+  isValidDate,
 } from './utils';
 const { spasm } = require('spasm.js');
 
@@ -74,6 +75,18 @@ describe('toBeTimestamp functions', () => {
   });
 });
 
+describe('isValidDate() function', () => {
+  test('converts to any, long, and short timestamps', () => {
+    expect(isValidDate(new Date())).toBe(true);
+    expect(isValidDate(new Date(0))).toBe(true);
+    expect(isValidDate(new Date(1641074686178))).toBe(true);
+    expect(isValidDate(new Date(1641074686))).toBe(true);
+    expect(isValidDate(new Date("2022-01-01T22:04:46.178Z"))).toBe(true);
+    expect(isValidDate(new Date("hello"))).toBe(false);
+    expect(isValidDate(null)).toBe(false);
+    expect(isValidDate(undefined)).toBe(false);
+  });
+});
 
 // containsHtmlTags()
 describe("containsHtmlTags() function tests", () => {

@@ -265,7 +265,7 @@ export const toBeStandardizedTimestamp = toBeShortTimestamp
 export const toBeStandardTimestamp = toBeShortTimestamp
 export const toBeNostrTimestamp = toBeShortTimestamp
 
-const isValidDate = (date: Date): boolean => {
+export const isValidDate = (date: Date): boolean => {
   return (
     date instanceof Date &&
     !isNaN(date.getTime()) &&
