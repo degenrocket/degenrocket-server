@@ -16,7 +16,8 @@ import {
   toBeLongTimestamp,
   toBeShortTimestamp,
   isValidDate,
-  isValidUrl
+  isValidUrl,
+  removeTrailingWhitespaceFromEachLine
 } from './utils';
 const { spasm } = require('spasm.js');
 
@@ -107,6 +108,14 @@ describe("isValidUrl() function tests", () => {
     expect(isValidUrl('https://thedefiant.io/news/123')).toStrictEqual(true)
     expect(isValidUrl('https://monero.observer')).toStrictEqual(true)
     expect(isValidUrl('mailto:monero.observer')).toStrictEqual(true)
+  });
+});
+
+describe('removeTrailingWhitespaceFromEachLine() function', () => {
+  test('removes trailing whitespace from each line', () => {
+    expect(removeTrailingWhitespaceFromEachLine(" hello ")).toBe("hello");
+    expect(removeTrailingWhitespaceFromEachLine("  hello  world   ")).toBe("hello  world");
+    expect(removeTrailingWhitespaceFromEachLine("  one \n  two   \nthree ")).toBe("one\ntwo\nthree");
   });
 });
 
