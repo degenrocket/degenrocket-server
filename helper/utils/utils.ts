@@ -640,3 +640,23 @@ export const splitArrayInChunks = (
   }
   return result;
 }
+
+// Used for tests to bypass TypeScript string type checks
+export const fakeAsString = (val: any): string => val as string
+
+// Used for tests to bypass TypeScript number type checks
+export const fakeAsNumber = (val: any): number => val as number
+
+// Used for tests to bypass TypeScript arrray type checks
+export const fakeAsArray = (val: any): any[] => val as any[]
+
+// Used for tests to bypass TypeScript null type checks
+export const fakeAsNull = (val: any): null => val as null
+
+// Used for tests to bypass TypeScript any type checks
+export const fakeAsAny = (val: any): any => val as any
+
+// Used for tests to bypass TypeScript any type checks
+export const fakeAsObject = (val: any): Record<any, any> => { 
+  return val as Record<any, any>
+}
