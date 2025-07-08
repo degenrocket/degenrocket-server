@@ -17,7 +17,8 @@ import {
   toBeShortTimestamp,
   isValidDate,
   isValidUrl,
-  removeTrailingWhitespaceFromEachLine
+  removeTrailingWhitespaceFromEachLine,
+  fakeAsString
 } from './utils';
 const { spasm } = require('spasm.js');
 
@@ -66,14 +67,35 @@ describe('toBeTimestamp functions', () => {
     expect(toBeTimestamp(1641074686178)).toBe(1641074686178);
     expect(toBeTimestamp("1641074686")).toBe(1641074686);
     expect(toBeTimestamp(1641074686)).toBe(1641074686);
+    expect(toBeTimestamp(0)).toBe(null);
+    expect(toBeTimestamp(-1)).toBe(null);
+    expect(toBeTimestamp(-1641074686)).toBe(null);
+    expect(toBeTimestamp(fakeAsString(null))).toBe(null);
+    expect(toBeTimestamp(fakeAsString(undefined))).toBe(null);
+    expect(toBeTimestamp(fakeAsString([]))).toBe(null);
+    expect(toBeTimestamp(fakeAsString({}))).toBe(null);
 
     expect(toBeLongTimestamp("2022-01-01T22:04:46.178Z")).toBe(1641074686178);
     expect(toBeLongTimestamp("1641074686")).toBe(1641074686000);
     expect(toBeLongTimestamp(1641074686)).toBe(1641074686000);
+    expect(toBeLongTimestamp(0)).toBe(null);
+    expect(toBeLongTimestamp(-1)).toBe(null);
+    expect(toBeLongTimestamp(-1641074686)).toBe(null);
+    expect(toBeLongTimestamp(fakeAsString(null))).toBe(null);
+    expect(toBeLongTimestamp(fakeAsString(undefined))).toBe(null);
+    expect(toBeLongTimestamp(fakeAsString([]))).toBe(null);
+    expect(toBeLongTimestamp(fakeAsString({}))).toBe(null);
 
     expect(toBeShortTimestamp("2022-01-01T22:04:46.178Z")).toBe(1641074686);
     expect(toBeShortTimestamp("1641074686178")).toBe(1641074686);
     expect(toBeShortTimestamp(1641074686178)).toBe(1641074686);
+    expect(toBeShortTimestamp(0)).toBe(null);
+    expect(toBeShortTimestamp(-1)).toBe(null);
+    expect(toBeShortTimestamp(-1641074686)).toBe(null);
+    expect(toBeShortTimestamp(fakeAsString(null))).toBe(null);
+    expect(toBeShortTimestamp(fakeAsString(undefined))).toBe(null);
+    expect(toBeShortTimestamp(fakeAsString([]))).toBe(null);
+    expect(toBeShortTimestamp(fakeAsString({}))).toBe(null);
   });
 });
 

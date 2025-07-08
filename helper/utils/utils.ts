@@ -165,8 +165,12 @@ export const toBeString = (input: any): string => {
  */
 export const toBeTimestamp = (
   originalTime: any
-): number | undefined => {
-  if (!originalTime) return undefined
+): number | null => {
+  if (!originalTime) return null
+  if (
+    typeof(originalTime) === "number" &&
+    originalTime < 0
+  ) { return null }
   let time = Number(originalTime)
     ? Number(originalTime)
     : originalTime
@@ -183,7 +187,7 @@ export const toBeTimestamp = (
     date = new Date(time);
     
     if (!isValidDate(date)) {
-      return undefined
+      return null
     }
   } 
   // Handle string inputs
@@ -196,11 +200,11 @@ export const toBeTimestamp = (
       if (!isValidDate(date)) {
         date = new Date(time)
         if (!isValidDate(date)) {
-          return undefined
+          return null
         }
       }
     } catch (err) {
-      return undefined
+      return null
     }
   } 
   // Handle Date objects
@@ -208,25 +212,26 @@ export const toBeTimestamp = (
     date = time
     
     if (!isValidDate(date)) {
-      return undefined
+      return null
     }
   } 
   // Invalid input type
   else {
-    return undefined
+    return null
   }
 
   // Always use UTC for consistency
-  return isValidDate(date) ? date.getTime() : undefined
+  return isValidDate(date) ? date.getTime() : null
 }
 
 // Nostr relays only accept 10 digits long timestamps
 export const toBeShortTimestamp = (
   value: string | number
-): number | undefined => {
-  if (!value || !isStringOrNumber) return undefined
+): number | null => {
+  if (!value || !isStringOrNumber(value)) return null
+  if (typeof(value) === "number" && value < 0) return null
   let timestamp = toBeTimestamp(value)
-  if (!timestamp) return undefined
+  if (!timestamp) return null
   if (String(timestamp) && String(timestamp).length === 13) {
     const str = String(timestamp)
     if (str && str.slice(0,10)) {
@@ -236,13 +241,15 @@ export const toBeShortTimestamp = (
   } else if (
     String(timestamp) && String(timestamp).length === 10
   ) { return timestamp }
-  return undefined
+  return null
 }
 
 export const toBeLongTimestamp = (
   value: string | number
 ): number | null => {
-  if (!value || !isStringOrNumber) return null
+  if (!value) return null
+  if (typeof(value) === "number" && value < 0) return null
+  if (!isStringOrNumber(value)) return null
   let timestamp = toBeTimestamp(value)
   if (!timestamp) return null
   // Some timestamps are 10 digits long, so we
