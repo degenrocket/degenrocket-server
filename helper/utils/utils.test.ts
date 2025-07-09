@@ -18,7 +18,8 @@ import {
   isValidDate,
   isValidUrl,
   removeTrailingWhitespaceFromEachLine,
-  fakeAsString
+  fakeAsString,
+  fakeAsObject
 } from './utils';
 const { spasm } = require('spasm.js');
 
@@ -107,8 +108,14 @@ describe('isValidDate() function', () => {
     expect(isValidDate(new Date(1641074686))).toBe(true);
     expect(isValidDate(new Date("2022-01-01T22:04:46.178Z"))).toBe(true);
     expect(isValidDate(new Date("hello"))).toBe(false);
-    expect(isValidDate(null)).toBe(false);
-    expect(isValidDate(undefined)).toBe(false);
+    expect(isValidDate(fakeAsObject(null) as Date)).toBe(false);
+    expect(isValidDate(fakeAsObject(undefined) as Date)).toBe(false);
+    expect(isValidDate(fakeAsObject(0) as Date)).toBe(false);
+    expect(isValidDate(fakeAsObject(1641074686178) as Date)).toBe(false);
+    expect(isValidDate(fakeAsObject("date") as Date)).toBe(false);
+    expect(isValidDate(fakeAsObject([1]) as Date)).toBe(false);
+    expect(isValidDate(fakeAsObject([1641074686178]) as Date)).toBe(false);
+    expect(isValidDate(fakeAsObject({timestamp: 1641074686178}) as Date)).toBe(false);
   });
 });
 
