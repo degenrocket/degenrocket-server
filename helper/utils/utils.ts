@@ -167,6 +167,7 @@ export const toBeTimestamp = (
   originalTime: any
 ): number | null => {
   if (!originalTime) return null
+  if (typeof(originalTime) === "boolean") return null
   if (
     typeof(originalTime) === "number" &&
     originalTime < 0
@@ -229,6 +230,7 @@ export const toBeShortTimestamp = (
   value: string | number
 ): number | null => {
   if (!value || !isStringOrNumber(value)) return null
+  if (typeof(value) === "boolean") return null
   if (typeof(value) === "number" && value < 0) return null
   let timestamp = toBeTimestamp(value)
   if (!timestamp) return null
@@ -248,6 +250,7 @@ export const toBeLongTimestamp = (
   value: string | number
 ): number | null => {
   if (!value) return null
+  if (typeof(value) === "boolean") return null
   if (typeof(value) === "number" && value < 0) return null
   if (!isStringOrNumber(value)) return null
   let timestamp = toBeTimestamp(value)

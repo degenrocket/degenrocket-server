@@ -50,9 +50,11 @@ describe('toBeString function', () => {
   });
 
 
-  test('ignores null and undefined', () => {
+  test('ignores null, undefined, booleans', () => {
     expect(toBeString(null)).toBe('');
     expect(toBeString(undefined)).toBe('');
+    expect(toBeString(true)).toBe('true');
+    expect(toBeString(false)).toBe('false');
   });
 
   test('returns empty string for unsupported types', () => {
@@ -73,6 +75,8 @@ describe('toBeTimestamp functions', () => {
     expect(toBeTimestamp(-1641074686)).toBe(null);
     expect(toBeTimestamp(fakeAsString(null))).toBe(null);
     expect(toBeTimestamp(fakeAsString(undefined))).toBe(null);
+    expect(toBeTimestamp(fakeAsString(true))).toBe(null);
+    expect(toBeTimestamp(fakeAsString(false))).toBe(null);
     expect(toBeTimestamp(fakeAsString([]))).toBe(null);
     expect(toBeTimestamp(fakeAsString({}))).toBe(null);
 
@@ -84,6 +88,8 @@ describe('toBeTimestamp functions', () => {
     expect(toBeLongTimestamp(-1641074686)).toBe(null);
     expect(toBeLongTimestamp(fakeAsString(null))).toBe(null);
     expect(toBeLongTimestamp(fakeAsString(undefined))).toBe(null);
+    expect(toBeLongTimestamp(fakeAsString(true))).toBe(null);
+    expect(toBeLongTimestamp(fakeAsString(false))).toBe(null);
     expect(toBeLongTimestamp(fakeAsString([]))).toBe(null);
     expect(toBeLongTimestamp(fakeAsString({}))).toBe(null);
 
@@ -95,6 +101,8 @@ describe('toBeTimestamp functions', () => {
     expect(toBeShortTimestamp(-1641074686)).toBe(null);
     expect(toBeShortTimestamp(fakeAsString(null))).toBe(null);
     expect(toBeShortTimestamp(fakeAsString(undefined))).toBe(null);
+    expect(toBeShortTimestamp(fakeAsString(true))).toBe(null);
+    expect(toBeShortTimestamp(fakeAsString(false))).toBe(null);
     expect(toBeShortTimestamp(fakeAsString([]))).toBe(null);
     expect(toBeShortTimestamp(fakeAsString({}))).toBe(null);
   });
@@ -110,6 +118,8 @@ describe('isValidDate() function', () => {
     expect(isValidDate(new Date("hello"))).toBe(false);
     expect(isValidDate(fakeAsObject(null) as Date)).toBe(false);
     expect(isValidDate(fakeAsObject(undefined) as Date)).toBe(false);
+    expect(isValidDate(fakeAsObject(true) as Date)).toBe(false);
+    expect(isValidDate(fakeAsObject(false) as Date)).toBe(false);
     expect(isValidDate(fakeAsObject(0) as Date)).toBe(false);
     expect(isValidDate(fakeAsObject(1641074686178) as Date)).toBe(false);
     expect(isValidDate(fakeAsObject("date") as Date)).toBe(false);
@@ -121,8 +131,10 @@ describe('isValidDate() function', () => {
 
 describe("isValidUrl() function tests", () => {
   test("should return true if URL is valid, else false", () => {
-    expect(isValidUrl(false)).toStrictEqual(false)
+    expect(isValidUrl(undefined)).toStrictEqual(false)
     expect(isValidUrl(null)).toStrictEqual(false)
+    expect(isValidUrl(true)).toStrictEqual(false)
+    expect(isValidUrl(false)).toStrictEqual(false)
     expect(isValidUrl(123)).toStrictEqual(false)
     expect(isValidUrl(0)).toStrictEqual(false)
     expect(isValidUrl([1])).toStrictEqual(false)
