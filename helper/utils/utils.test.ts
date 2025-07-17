@@ -157,6 +157,14 @@ describe('removeTrailingWhitespaceFromEachLine() function', () => {
     expect(removeTrailingWhitespaceFromEachLine(" hello ")).toBe("hello");
     expect(removeTrailingWhitespaceFromEachLine("  hello  world   ")).toBe("hello  world");
     expect(removeTrailingWhitespaceFromEachLine("  one \n  two   \nthree ")).toBe("one\ntwo\nthree");
+    expect(removeTrailingWhitespaceFromEachLine(fakeAsString(null))).toBe("");
+    expect(removeTrailingWhitespaceFromEachLine(fakeAsString(undefined))).toBe("");
+    expect(removeTrailingWhitespaceFromEachLine(fakeAsString(true))).toBe("");
+    expect(removeTrailingWhitespaceFromEachLine(fakeAsString(false))).toBe("");
+    expect(removeTrailingWhitespaceFromEachLine(fakeAsString(0))).toBe("");
+    expect(removeTrailingWhitespaceFromEachLine(fakeAsString(123))).toBe("");
+    expect(removeTrailingWhitespaceFromEachLine(fakeAsString([0,1,2]))).toBe("");
+    expect(removeTrailingWhitespaceFromEachLine(fakeAsString({a:1}))).toBe("");
   });
 });
 
