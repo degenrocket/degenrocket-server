@@ -255,11 +255,17 @@ with a **bold** [link](https://example.com)`;
     const input = "<asf>hello world</asf>";
     expect(containsHtmlTags(input)).toBe(true);
   });
-});
 
-// ifEventContainsHtmlTags()
-describe("ifEventContainsHtmlTags() function tests", () => {
-  // TODO
+  test("should return false if a passed value is not a string", () => {
+    expect(containsHtmlTags(fakeAsString(null))).toBe(false);
+    expect(containsHtmlTags(fakeAsString(undefined))).toBe(false);
+    expect(containsHtmlTags(fakeAsString(true))).toBe(false);
+    expect(containsHtmlTags(fakeAsString(false))).toBe(false);
+    expect(containsHtmlTags(fakeAsString(0))).toBe(false);
+    expect(containsHtmlTags(fakeAsString(123))).toBe(false);
+    expect(containsHtmlTags(fakeAsString([1,2,3]))).toBe(false);
+    expect(containsHtmlTags(fakeAsString({a:1}))).toBe(false);
+  });
 });
 
 // sanitizeEvent()
