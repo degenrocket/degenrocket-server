@@ -383,6 +383,7 @@ describe("convertToSpasm() tests", () => {
       { to: { spasm: { version: "2.0.0" } } }
     )).toEqual(output);
   });
+
   test("should return null if an event has malicious code", () => {
     const input = JSON.parse(JSON.stringify(validSpasmEventRssItemV0));
     const inputMalicious = {
@@ -394,6 +395,22 @@ describe("convertToSpasm() tests", () => {
       inputMalicious,
       { to: { spasm: { version: "2.0.0" } } }
     )).toEqual(null);
+  });
+
+  test("should return null if invalid value is passed", () => {
+    // Hide console errors for invalid addresses during tests
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    expect(spasm.convertToSpasm(null)).toEqual(null);
+    expect(spasm.convertToSpasm(undefined)).toEqual(null);
+    expect(spasm.convertToSpasm(true)).toEqual(null);
+    expect(spasm.convertToSpasm(false)).toEqual(null);
+    expect(spasm.convertToSpasm(0)).toEqual(null);
+    expect(spasm.convertToSpasm(123)).toEqual(null);
+    expect(spasm.convertToSpasm("")).toEqual(null);
+    expect(spasm.convertToSpasm("abc")).toEqual(null);
+    expect(spasm.convertToSpasm([1,2,3])).toEqual(null);
+    // Restore console errors
+    jest.restoreAllMocks();
   });
 });
 
