@@ -337,6 +337,31 @@ describe("sanitizeEvent() function tests", () => {
     const output = JSON.parse(JSON.stringify(eventClean));
     expect(input).toStrictEqual(output);
   });
+
+  test("should not change a passed value if it's of invalid type", () => {
+    // Hide console errors for invalid addresses during tests
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    const inputNull = null
+    spasm.sanitizeEvent(inputNull)
+    expect(inputNull).toStrictEqual(null);
+    const inputUndefined = undefined
+    spasm.sanitizeEvent(inputUndefined)
+    expect(inputUndefined).toStrictEqual(undefined);
+    const inputTrue = true
+    spasm.sanitizeEvent(inputTrue)
+    expect(inputTrue).toStrictEqual(true);
+    const inputFalse = false
+    spasm.sanitizeEvent(inputFalse)
+    expect(inputFalse).toStrictEqual(false);
+    const inputZero = 0
+    spasm.sanitizeEvent(inputZero)
+    expect(inputZero).toStrictEqual(0);
+    const inputNumber = 123
+    spasm.sanitizeEvent(inputNumber)
+    expect(inputNumber).toStrictEqual(123);
+    // Restore console errors
+    jest.restoreAllMocks();
+  });
 });
 
 // convertToSpasm() with sanitizeEvent() with DOMPurify
