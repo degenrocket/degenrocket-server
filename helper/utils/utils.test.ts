@@ -1,4 +1,7 @@
-import {ConfigForSubmitSpasmEvent} from '../../types/interfaces';
+import {
+  ConfigForSubmitSpasmEvent,
+  UnknownEventV2
+} from '../../types/interfaces';
 import {
   validSpasmEventRssItemV0,
   validSpasmEventRssItemV0ConvertedToSpasmV2
@@ -496,6 +499,46 @@ describe("ifEventContainsHtmlTags() tests", () => {
       content: "line one\nline two"
     }
     expect(ifEventContainsHtmlTags(inputWithHtml)).toEqual(false);
+  });
+  test("should handle invalid value types", () => {
+    // Hide console errors for invalid addresses during tests
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    expect(ifEventContainsHtmlTags(
+      fakeAsObject(undefined) as UnknownEventV2
+    )).toEqual(false);
+    expect(ifEventContainsHtmlTags(
+      fakeAsObject(null) as UnknownEventV2
+    )).toEqual(false);
+    expect(ifEventContainsHtmlTags(
+      fakeAsObject(true) as UnknownEventV2
+    )).toEqual(false);
+    expect(ifEventContainsHtmlTags(
+      fakeAsObject(false) as UnknownEventV2
+    )).toEqual(false);
+    expect(ifEventContainsHtmlTags(
+      fakeAsObject(0) as UnknownEventV2
+    )).toEqual(false);
+    expect(ifEventContainsHtmlTags(
+      fakeAsObject(123) as UnknownEventV2
+    )).toEqual(false);
+    expect(ifEventContainsHtmlTags(
+      fakeAsObject([1,2,3]) as UnknownEventV2
+    )).toEqual(false);
+    expect(ifEventContainsHtmlTags(
+      fakeAsObject({a:1}) as UnknownEventV2
+    )).toEqual(false);
+    expect(ifEventContainsHtmlTags(
+      fakeAsObject("") as UnknownEventV2
+    )).toEqual(false);
+    expect(ifEventContainsHtmlTags(
+      fakeAsObject("abc") as UnknownEventV2
+    )).toEqual(false);
+    // Strings can return true
+    expect(ifEventContainsHtmlTags(
+      fakeAsObject("<p>hello world") as UnknownEventV2
+    )).toEqual(true);
+    // Restore console errors
+    jest.restoreAllMocks();
   });
 });
 

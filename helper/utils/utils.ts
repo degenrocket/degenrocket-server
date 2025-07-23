@@ -388,6 +388,14 @@ export const containsHtmlTags = (
 }
 
 export const ifEventContainsHtmlTags = (event: UnknownEventV2) => {
+  if (!event) return false
+  if (
+    typeof(event) === "boolean" ||
+    typeof(event) === "number"
+  ) { return false }
+
+  if (typeof(event) === "string") return containsHtmlTags(event)
+
   const copyOfEvent = JSON.parse(JSON.stringify(event))
   let htmlTagsDetected = false
   const checkIfContainsHtmlTags = (value: any) => {
