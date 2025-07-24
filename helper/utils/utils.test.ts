@@ -22,7 +22,8 @@ import {
   isValidUrl,
   removeTrailingWhitespaceFromEachLine,
   fakeAsString,
-  fakeAsObject
+  fakeAsObject,
+  fakeAsArray
 } from './utils';
 const { spasm } = require('spasm.js');
 
@@ -542,7 +543,7 @@ describe("ifEventContainsHtmlTags() tests", () => {
   });
 });
 
-describe("ifEventContainsHtmlTags() tests", () => {
+describe("hasCommonValuesInArrays() tests", () => {
   test("should return false if arrays have no common values", () => {
     const arr1 = []
     const arr2 = []
@@ -582,6 +583,35 @@ describe("ifEventContainsHtmlTags() tests", () => {
     expect(getCommonValuesInArrays(arr3, arr7)).toEqual([3]);
     expect(getCommonValuesInArrays(arr4, arr7)).toEqual(["six"]);
     expect(getCommonValuesInArrays(arr7, arr8)).toEqual([ 5, "eight"]);
+  });
+  test("should return null if passed values are invalid types", async () => {
+    expect(getCommonValuesInArrays(
+      fakeAsArray(null),fakeAsArray(null)
+    )).toEqual([]);
+    expect(getCommonValuesInArrays(
+      fakeAsArray(undefined),fakeAsArray(undefined)
+    )).toEqual([]);
+    expect(getCommonValuesInArrays(
+      fakeAsArray(true),fakeAsArray(true)
+    )).toEqual([]);
+    expect(getCommonValuesInArrays(
+      fakeAsArray(false),fakeAsArray(false)
+    )).toEqual([]);
+    expect(getCommonValuesInArrays(
+      fakeAsArray(""),fakeAsArray("")
+    )).toEqual([]);
+    expect(getCommonValuesInArrays(
+      fakeAsArray("abc"),fakeAsArray("abc")
+    )).toEqual([]);
+    expect(getCommonValuesInArrays(
+      fakeAsArray(0),fakeAsArray(0)
+    )).toEqual([]);
+    expect(getCommonValuesInArrays(
+      fakeAsArray(123),fakeAsArray(123)
+    )).toEqual([]);
+    expect(getCommonValuesInArrays(
+      fakeAsArray({a:1}),fakeAsArray({a:1})
+    )).toEqual([]);
   });
 });
 
