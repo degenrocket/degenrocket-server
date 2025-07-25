@@ -629,6 +629,23 @@ describe("mergeConfigsForSubmitSpasmEvent() tests", () => {
 
     expect(input).toEqual(output);
   });
+  test("should handle invalid types", async () => {
+    const defaultConfig = new ConfigForSubmitSpasmEvent()
+    const inputDefault = mergeConfigsForSubmitSpasmEvent(
+      defaultConfig, fakeAsObject(null) as ConfigForSubmitSpasmEvent
+    )
+    const outputDefault = new ConfigForSubmitSpasmEvent()
+    expect(inputDefault).toEqual(outputDefault);
+
+    const customConfig = new ConfigForSubmitSpasmEvent()
+    customConfig.web3.signature.ethereum.enabled = false
+    const inputCustom = mergeConfigsForSubmitSpasmEvent(
+      customConfig, fakeAsObject(null) as ConfigForSubmitSpasmEvent
+    )
+    const outputCustom = new ConfigForSubmitSpasmEvent()
+    outputCustom.web3.signature.ethereum.enabled = false
+    expect(inputCustom).toEqual(outputCustom);
+  });
 });
 
 // splitStringIntoArrayOfStrings
