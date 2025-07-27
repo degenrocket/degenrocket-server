@@ -669,6 +669,16 @@ describe("splitStringIntoArrayOfStrings() tests", () => {
     expect(splitIntoArray(input, ',', false))
       .toStrictEqual(output3);
   });
+  test("should return empty array if passed invalid type", async () => {
+    expect(splitIntoArray(fakeAsString(null))).toStrictEqual([]);
+    expect(splitIntoArray(fakeAsString(undefined))).toStrictEqual([]);
+    expect(splitIntoArray(fakeAsString(true))).toStrictEqual([]);
+    expect(splitIntoArray(fakeAsString(false))).toStrictEqual([]);
+    expect(splitIntoArray(fakeAsString(0))).toStrictEqual([]);
+    expect(splitIntoArray(fakeAsString(123))).toStrictEqual([]);
+    expect(splitIntoArray(fakeAsString([1,2,3]))).toStrictEqual([]);
+    expect(splitIntoArray(fakeAsString({a:1}))).toStrictEqual([]);
+  });
 });
 
 // template()
