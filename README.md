@@ -1,6 +1,6 @@
 # DegenRocket server
 
-DegenRocket-server is a backend for a web3 decentralized social media with native support for Degen Messaging Protocol (DMP).
+DegenRocket-server is a backend for a [Spasm-powered](https://github.com/degenrocket/spasm.js) forum.
 
 DegenRocket-web repository can be found [here](https://github.com/degenrocket/degenrocket-web).
 
