@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import axios, { AxiosResponse } from 'axios';
-import { SpasmSource, Post, IgnoreWhitelistFor, ConfigForSubmitSpasmEvent } from "../../types/interfaces";
+import { SpasmSource, Post, IgnoreWhitelistFor, ConfigForSubmitSpasmEvent, UnknownEventV2 } from "../../types/interfaces";
 import {submitSpasmEvent} from '../sql/submitSpasmEvent';
 import {poolDefault} from '../../db';
 import {env} from "./../../appConfig"
@@ -77,9 +77,11 @@ export const fetchPostsFromSpasmSources = async (frequency?: string) => {
     console.error(absolutePath, "file doesn't exist. If you want to use SPASM module, make sure to create this file and specify SPASM sources as shown in the example file in the same folder.")
   }
 
-  const getData = async (source: SpasmSource) => {
+  const getData = async (
+    source: SpasmSource
+  ): Promise<string> => {
     try {
-      if (!source.apiUrl) return
+      if (!source.apiUrl) return "ERROR: no API URL in Spasm source"
 
       let fetchUrl = source.apiUrl
 
@@ -106,7 +108,7 @@ export const fetchPostsFromSpasmSources = async (frequency?: string) => {
       // console.log("response:", response)
 
       if (response.data) {
-        let arrayOfPosts = []
+        let arrayOfPosts: UnknownEventV2[] = []
         // 1. Handle arrays of posts/events
         if (Array.isArray(response.data)) {
         /**
@@ -124,7 +126,9 @@ export const fetchPostsFromSpasmSources = async (frequency?: string) => {
         ) {
           arrayOfPosts.push(response.data)
         }
-        await Promise.all(arrayOfPosts.map((post) => {
+
+        // Execute sequentially one by one
+        for (const post of arrayOfPosts) {
           // Submit V2
           const customConfig = new ConfigForSubmitSpasmEvent()
           if (ignoreWhitelistForActionPostInSpasmModule) {
@@ -136,27 +140,33 @@ export const fetchPostsFromSpasmSources = async (frequency?: string) => {
           if (ignoreWhitelistForActionReplyInSpasmModule) {
             customConfig.whitelist.action.reply.enabled = false
           }
-          return submitSpasmEvent(post, poolDefault, customConfig)
-        }))
+          await submitSpasmEvent(post, poolDefault, customConfig)
+        }
+
+        return "Success. Finished fetching Spasm source (federation)"
+
       } else {
         console.log("data for submitAction is null")
       }
     } catch (err) {
       console.error('getData failed for source.apiUrl:', source.apiUrl, 'at', time, ', error message is hidden');
+      return "ERROR: Something went wrong when getting data from Spasm source (federation)"
     }
   };
 
   try {
-    // Promise.all and map are used because
-    // await doesn't work with array.forEach
-    let fetchResult = []
     if (sources && sources[0]) {
-      fetchResult = await Promise.all(sources.map(getData))
-      return fetchResult[0] ? 'SPASM successfully fetched' : 'Something went wrong. SPASM not fetched'
+      // Execute sequentially one by one
+      for (const source of sources) {
+        const result = await getData(source)
+        console.log("result:", result)
+      }
+      return 'Success. Spasm sources fetched (federation)'
     }
-    return 'There are no SPASM sources'
+    return 'There are no Spasm sources (federation)'
 
   } catch (err) {
     console.error(err);
+    return 'ERROR: Something went wrong when fetching Spasm sources (federation)'
   }
 }
